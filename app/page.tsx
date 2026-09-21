@@ -291,7 +291,7 @@ export default function Dashboard() {
         const location = get(["location", "store", "storelocation"]) || "Head Office";
         const avatar = name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
         return {
-          id, name, location, avatar, shiftIn: "—", status: "Not Checked In",
+          id, name, location, avatar, shiftIn: "—", status: "Not Checked In" as const,
           phone: get(["phone", "mobile", "mobilenumber"]),
           email: get(["email", "emailaddress"]),
           dob: get(["dob", "dateofbirth"]),

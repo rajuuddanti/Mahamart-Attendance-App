@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "../lib/supabase";
 
 type Employee = {
   id: string;
@@ -223,25 +224,80 @@ export default function Dashboard() {
 
   const datePunches = punches.filter((p) => p.date === dateFilter);
 
-  function addEmployee(event: FormEvent<HTMLFormElement>) {
+  async function addEmployee(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const name = String(form.get("name") || "").trim();
     const location = String(form.get("location") || "Head Office").trim();
     if (!name) return;
+
     const id = "EMP" + String(employees.length + 1).padStart(3, "0");
     const avatar = name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+    const phone = String(form.get("phone") || "");
+    const email = String(form.get("email") || "");
+    const designation = String(form.get("designation") || "");
+    const department = String(form.get("department") || "");
+    const joiningDate = String(form.get("joiningDate") || "");
+    const shiftStart = String(form.get("shiftStart") || "09:00");
+    const shiftEnd = String(form.get("shiftEnd") || "18:00");
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user) {
+      alert("Please sign in through the Live Attendance page first, then try again.");
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile?.company_id) {
+      alert(profileError?.message || "Admin profile/company was not found in Supabase.");
+      return;
+    }
+
+    const { data: locationRow, error: locationError } = await supabase
+      .from("locations")
+      .select("id")
+      .eq("company_id", profile.company_id)
+      .eq("name", location)
+      .maybeSingle();
+
+    if (locationError) {
+      alert(locationError.message);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("employees").insert({
+      company_id: profile.company_id,
+      employee_code: id,
+      full_name: name,
+      location_id: locationRow?.id ?? null,
+      phone: phone || null,
+      email: email || null,
+      designation: designation || null,
+      department: department || null,
+      joining_date: joiningDate || null,
+      active: true,
+    });
+
+    if (insertError) {
+      alert(insertError.message);
+      return;
+    }
+
     const employee: Employee = {
       id, name, location, shiftIn: "—", status: "Not Checked In", avatar,
-      phone: String(form.get("phone") || ""), email: String(form.get("email") || ""),
-      designation: String(form.get("designation") || ""), department: String(form.get("department") || ""),
-      joiningDate: String(form.get("joiningDate") || ""),
-      shiftStart: String(form.get("shiftStart") || "09:00"),
-      shiftEnd: String(form.get("shiftEnd") || "18:00"),
-      role: "Employee",
+      phone, email, designation, department, joiningDate,
+      shiftStart, shiftEnd, role: "Employee",
     };
+
     setEmployees((current) => [...current, employee]);
     setShowAdd(false);
+    alert(name + " was saved to Supabase.");
   }
 
   function punchEmployee(employeeId: string, action: Punch["action"]) {

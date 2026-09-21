@@ -188,3 +188,19 @@ td { padding:13px 20px; border-top:1px solid #f0f2f4; color:#65717d; font-size:1
 @media (max-width:1100px) { .stats-grid { grid-template-columns:repeat(3,1fr); } }
 @media (max-width:800px) { .stats-grid { grid-template-columns:repeat(2,1fr); } .late-list, .form-grid, .import-fields, .employee-detail-grid { grid-template-columns:1fr; } .page-actions, .attendance-filters { flex-direction:column; align-items:stretch; } }
 @media (max-width:600px) { .stats-grid { grid-template-columns:1fr; } }
+
+.clickable-card { border:0; width:100%; text-align:left; cursor:pointer; }
+.clickable-card:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(20,107,77,.10); }
+.clickable-cell { cursor:pointer; }
+.report-tabs { display:flex; gap:8px; margin-bottom:14px; }
+.report-tabs button { border:1px solid var(--line); background:#fff; border-radius:8px; padding:9px 14px; font-size:11px; font-weight:700; color:#61707b; cursor:pointer; }
+.report-tabs button.active { background:#146b4d; color:#fff; border-color:#146b4d; }
+.report-panel { overflow:auto; }
+.detail-card-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:8px 0 18px; }
+.inline-form { display:flex; gap:8px; }
+.inline-form input { flex:1; border:1px solid var(--line); border-radius:8px; padding:10px; }
+.nested { position:absolute; inset:0; z-index:20; }
+.modal-backdrop.nested { background:rgba(12,24,19,.35); }
+.modal textarea { width:100%; min-height:90px; resize:vertical; border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; font-size:11px; }
+.action-row { flex-wrap:wrap; }
+@media (max-width:800px) { .detail-card-grid { grid-template-columns:1fr; } .report-tabs { overflow:auto; } }

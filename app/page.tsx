@@ -24,6 +24,9 @@ type Employee = {
   aadhaar?: string;
   bankAccount?: string;
   ifsc?: string;
+  shiftStart?: string;
+  shiftEnd?: string;
+  role?: string;
 };
 
 type Punch = {
@@ -63,9 +66,9 @@ const navItems = [
 ];
 
 const initialEmployees: Employee[] = [
-  { name: "Rahul Kumar", id: "EMP001", location: "Head Office", shiftIn: "09:02 AM", status: "Present", avatar: "RK", late: false, phone: "9876543210", email: "rahul@mahamart.com", designation: "Sales Executive", department: "Sales" },
-  { name: "Suresh Babu", id: "EMP002", location: "Head Office", shiftIn: "09:11 AM", status: "On Break", avatar: "SB", late: false, phone: "9876543211", email: "suresh@mahamart.com", designation: "Store Executive", department: "Store" },
-  { name: "Priya Sharma", id: "EMP003", location: "Head Office", shiftIn: "08:58 AM", status: "Present", avatar: "PS", late: false, phone: "9876543212", email: "priya@mahamart.com", designation: "HR Executive", department: "HR" },
+  { name: "Rahul Kumar", id: "EMP001", location: "Head Office", shiftIn: "09:02 AM", status: "Present", avatar: "RK", late: false, phone: "9876543210", email: "rahul@mahamart.com", designation: "Sales Executive", department: "Sales", shiftStart: "09:00", shiftEnd: "18:00", role: "Employee" },
+  { name: "Suresh Babu", id: "EMP002", location: "Head Office", shiftIn: "09:11 AM", status: "Present", avatar: "SB", late: false, phone: "9876543211", email: "suresh@mahamart.com", designation: "Store Executive", department: "Store", shiftStart: "09:00", shiftEnd: "18:30", role: "Employee" },
+  { name: "Priya Sharma", id: "EMP003", location: "Head Office", shiftIn: "08:58 AM", status: "Present", avatar: "PS", late: false, phone: "9876543212", email: "priya@mahamart.com", designation: "HR Executive", department: "HR", shiftStart: "09:00", shiftEnd: "18:00", role: "Employee" },
   { name: "Arun Kumar", id: "EMP004", location: "Head Office", shiftIn: "—", status: "Not Checked In", avatar: "AK" },
   { name: "Divya Reddy", id: "EMP005", location: "Head Office", shiftIn: "09:17 AM", status: "Present", avatar: "DR", late: true },
   { name: "Kiran Rao", id: "EMP006", location: "Head Office", shiftIn: "09:06 AM", status: "Present", avatar: "KR" },
@@ -183,6 +186,7 @@ export default function Dashboard() {
   const [showAdd, setShowAdd] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -232,39 +236,54 @@ export default function Dashboard() {
       phone: String(form.get("phone") || ""), email: String(form.get("email") || ""),
       designation: String(form.get("designation") || ""), department: String(form.get("department") || ""),
       joiningDate: String(form.get("joiningDate") || ""),
+      shiftStart: String(form.get("shiftStart") || "09:00"),
+      shiftEnd: String(form.get("shiftEnd") || "18:00"),
+      role: "Employee",
     };
     setEmployees((current) => [...current, employee]);
     setShowAdd(false);
   }
 
   function punchEmployee(employeeId: string, action: Punch["action"]) {
+    if (action !== "Shift In" && action !== "Shift Out") return;
     const employee = employees.find((item) => item.id === employeeId);
     if (!employee) return;
     const time = nowLabel();
     const date = localDate();
+    const todays = punches.filter((p) => p.employeeId === employeeId && p.date === date);
+    const hasOpenShift = todays.some((p) => p.action === "Shift In") && !todays.some((p) => p.action === "Shift Out");
+    if (action === "Shift In" && hasOpenShift) { alert("This employee is already checked in. Shift Out must be recorded first."); return; }
+    if (action === "Shift Out" && !hasOpenShift) { alert("This employee is not checked in."); return; }
     let status: Employee["status"] = employee.status;
     let late = employee.late;
     if (action === "Shift In") {
       status = "Present";
       const currentMinutes = timeToMinutes(time);
-      const shiftMinutes = scheduleTimeToMinutes(rules.shiftStart);
+      const shiftMinutes = scheduleTimeToMinutes(employee.shiftStart || rules.shiftStart);
       late = currentMinutes > shiftMinutes + Number(rules.grace);
     }
     if (action === "Shift Out") {
-      const worked = calculateWorkedMinutes(employeeId, date, [...punches, { id: "temp", employeeId, employee: employee.name, action, time, date, faceVerified: false, faceConfidence: 0, source: "Web Admin" }]);
+      const worked = calculateWorkedMinutes(employeeId, date, [...punches, { id: "temp", employeeId, employee: employee.name, action, time, date, faceVerified: false, faceConfidence: 0, source: "Web Admin" as const }]);
       if (rules.workingHoursEnabled) {
         if (worked < Number(rules.absentHours) * 60) status = "Absent";
         else if (worked < Number(rules.halfDayHours) * 60) status = "Half Day";
         else status = "Present";
-      } else {
-        status = "Not Checked In";
       }
     }
-    if (action === "Break Out") status = "On Break";
-    if (action === "Break In") status = "Present";
-
     setEmployees((current) => current.map((item) => item.id === employeeId ? { ...item, status, shiftIn: action === "Shift In" ? time : item.shiftIn, late } : item));
     setPunches((current) => [{ id: Date.now().toString(), employeeId, employee: employee.name, action, time, date, faceVerified: false, faceConfidence: 0, source: "Web Admin" as const }, ...current].slice(0, 500));
+  }
+
+  function createAdminBreak(employeeId: string, remarks: string) {
+    const employee = employees.find((item) => item.id === employeeId);
+    if (!employee) return;
+    const time = nowLabel();
+    const date = localDate();
+    const hasOpenShift = punches.some((p) => p.employeeId === employeeId && p.date === date && p.action === "Shift In") &&
+      !punches.some((p) => p.employeeId === employeeId && p.date === date && p.action === "Shift Out");
+    if (!hasOpenShift) { alert("Employee must be checked in before a break can be created."); return; }
+    setPunches((current) => [{ id: Date.now().toString(), employeeId, employee: employee.name, action: "Break Out", time, date, faceVerified: false, faceConfidence: 0, source: "Web Admin" as const, notes: remarks } as Punch, ...current]);
+    setEmployees((current) => current.map((item) => item.id === employeeId ? { ...item, status: "On Break" } : item));
   }
 
   function goTo(label: string) {
@@ -338,9 +357,9 @@ export default function Dashboard() {
         <div className="page">
           {active === "Dashboard" && <DashboardPage stats={stats} employees={employees} punches={datePunches} rules={rules} date={dateFilter} onDate={setDateFilter} onAdd={() => setShowAdd(true)} onGo={goTo} />}
           {active === "Employees" && <EmployeesPage employees={filteredEmployees} allEmployees={employees} search={search} storeFilter={storeFilter} locations={locations} onSearch={setSearch} onStore={setStoreFilter} onAdd={() => setShowAdd(true)} onImport={() => setShowImport(true)} onSelect={setSelectedEmployee} />}
-          {active === "Locations" && <LocationsPage locations={locations} employees={employees} onAdd={() => alert("Location creation will be connected to Supabase next.")} />}
-          {active === "Attendance" && <AttendancePage employees={filteredEmployees} punches={punches} date={dateFilter} onDate={setDateFilter} storeFilter={storeFilter} locations={locations} onStore={setStoreFilter} onPunch={punchEmployee} />}
-          {active === "Reports" && <ReportsPage employees={employees} />}
+          {active === "Locations" && <LocationsPage locations={locations} employees={employees} onAdd={() => alert("Location creation will be connected to Supabase next.")} onSelect={setSelectedLocation} onRename={(oldName, newName) => setEmployees((current) => current.map((e) => e.location === oldName ? { ...e, location: newName } : e))} />}
+          {active === "Attendance" && <AttendancePage employees={filteredEmployees} punches={punches} date={dateFilter} onDate={setDateFilter} storeFilter={storeFilter} locations={locations} onStore={setStoreFilter} onPunch={punchEmployee} onSelect={setSelectedEmployee} />}
+          {active === "Reports" && <ReportsPage employees={employees} punches={punches} rules={rules} />}
           {active === "Users & Roles" && <UsersPage />}
           {active === "Rules" && <RulesPage rules={rules} setRules={setRules} />}
           {active === "Settings" && <SettingsPage rules={rules} setRules={setRules} />}
@@ -350,7 +369,8 @@ export default function Dashboard() {
       {showAdd && <EmployeeForm locations={locations} onClose={() => setShowAdd(false)} onSubmit={addEmployee} />}
       {showImport && <ImportHelp onClose={() => setShowImport(false)} onChoose={() => importRef.current?.click()} />}
       <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={importExcel} hidden />
-      {selectedEmployee && <EmployeeDetail employee={selectedEmployee} punches={punches} onClose={() => setSelectedEmployee(null)} />}
+      {selectedEmployee && <EmployeeDetail employee={selectedEmployee} punches={punches} onClose={() => setSelectedEmployee(null)} onBreak={createAdminBreak} />}
+      {selectedLocation && <LocationDetail location={selectedLocation} employees={employees} onClose={() => setSelectedLocation(null)} onRename={(name) => { setEmployees((current) => current.map((e) => e.location === selectedLocation ? { ...e, location: name } : e)); setSelectedLocation(name); }} />}
     </main>
   );
 }
@@ -375,19 +395,33 @@ function EmployeesPage({ employees, allEmployees, search, storeFilter, locations
   </PageFrame>;
 }
 
-function LocationsPage({ locations, employees, onAdd }: { locations: string[]; employees: Employee[]; onAdd: () => void }) {
-  return <PageFrame title="Locations" subtitle="Manage stores and office attendance points" action={<button className="primary-button" onClick={onAdd}>+ Add Location</button>}><div className="location-grid">{locations.map((location) => <div className="location-card" key={location}><div className="location-top"><span className="location-icon">⌖</span><StatusBadge status="Present" /></div><h3>{location}</h3><p>Attendance location</p><div className="location-meta"><span><strong>{employees.filter((e) => e.location === location).length}</strong> Employees</span><span><strong>1</strong> Kiosk</span></div></div>)}</div></PageFrame>;
+function LocationsPage({ locations, employees, onAdd, onSelect, onRename }: { locations: string[]; employees: Employee[]; onAdd: () => void; onSelect: (location: string) => void; onRename: (oldName: string, newName: string) => void }) {
+  return <PageFrame title="Locations" subtitle="Click a location to view employees, attendance and geo-fence settings" action={<button className="primary-button" onClick={onAdd}>+ Add Location</button>}><div className="location-grid">{locations.map((location) => <button className="location-card clickable-card" key={location} onClick={() => onSelect(location)}><div className="location-top"><span className="location-icon">⌖</span><StatusBadge status="Present" /></div><h3>{location}</h3><p>Click to open location details</p><div className="location-meta"><span><strong>{employees.filter((e) => e.location === location).length}</strong> Employees</span><span><strong>1</strong> Kiosk</span></div></button>)}</div></PageFrame>;
 }
 
-function AttendancePage({ employees, punches, date, onDate, storeFilter, locations, onStore, onPunch }: { employees: Employee[]; punches: Punch[]; date: string; onDate: (v: string) => void; storeFilter: string; locations: string[]; onStore: (v: string) => void; onPunch: (id: string, action: Punch["action"]) => void }) {
+function LocationDetail({ location, employees, onClose, onRename }: { location: string; employees: Employee[]; onClose: () => void; onRename: (name: string) => void }) {
+  const [name, setName] = useState(location);
+  const people = employees.filter((e) => e.location === location);
+  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal xl-modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-header"><div><h3>{location}</h3><p>{people.length} employees assigned to this location</p></div><button className="close-button" onClick={onClose}>×</button></div><div className="detail-card-grid"><div className="detail-card"><strong>Employees</strong><span>{people.length}</span></div><div className="detail-card"><strong>Kiosks</strong><span>1</span></div><div className="detail-card"><strong>Geo-fence</strong><span>Configure in Supabase</span></div></div><h4>Location name</h4><div className="inline-form"><input value={name} onChange={(e) => setName(e.target.value)} /><button className="primary-button" onClick={() => { if(name.trim()) onRename(name.trim()); }}>Save name</button></div><h4>Employees</h4><div className="table-wrap"><table><thead><tr><th>ID</th><th>NAME</th><th>DESIGNATION</th><th>SHIFT</th></tr></thead><tbody>{people.map(e=><tr key={e.id}><td>{e.id}</td><td>{e.name}</td><td>{e.designation || "—"}</td><td>{e.shiftStart || "09:00"} - {e.shiftEnd || "18:00"}</td></tr>)}</tbody></table></div></div></div>;
+}
+
+function AttendancePage({ employees, punches, date, onDate, storeFilter, locations, onStore, onPunch, onSelect }: { employees: Employee[]; punches: Punch[]; date: string; onDate: (v: string) => void; storeFilter: string; locations: string[]; onStore: (v: string) => void; onPunch: (id: string, action: Punch["action"]) => void; onSelect: (employee: Employee) => void }) {
   const visiblePunches = punches.filter((p) => p.date === date && (storeFilter === "All Locations" || employees.find((e) => e.id === p.employeeId)?.location === storeFilter));
-  return <PageFrame title="Attendance" subtitle="View and manage attendance"><div className="attendance-filters"><label className="date-filter">Date<input type="date" value={date} onChange={(e) => onDate(e.target.value)} /></label><label className="date-filter">Store<select className="filter-select" value={storeFilter} onChange={(e) => onStore(e.target.value)}><option>All Locations</option>{locations.map((l) => <option key={l}>{l}</option>)}</select></label></div><div className="attendance-layout"><div className="panel"><div className="panel-header"><div><h3>Attendance for {date}</h3><p>Admin can manually record any punch.</p></div></div><div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>STATUS</th><th>SHIFT IN</th><th>WORKED</th><th>ACTIONS</th></tr></thead><tbody>{employees.map((person) => <tr key={person.id}><td><div className="employee-cell"><div className="avatar small">{person.avatar}</div><div><strong>{person.name}</strong><small>{person.id}</small></div></div></td><td><StatusBadge status={person.late ? "Late" : person.status} /></td><td>{person.shiftIn}</td><td>{formatHours(calculateWorkedMinutes(person.id, date, punches))}</td><td><div className="action-row"><button className="table-action" onClick={() => onPunch(person.id, "Shift In")}>Shift In</button><button className="table-action" onClick={() => onPunch(person.id, "Break Out")}>Break Out</button><button className="table-action" onClick={() => onPunch(person.id, "Break In")}>Break In</button><button className="table-action" onClick={() => onPunch(person.id, "Shift Out")}>Shift Out</button></div></td></tr>)}</tbody></table></div></div><div className="panel"><div className="panel-header"><div><h3>Punch & face verification log</h3><p>Last 7 days of recorded punch metadata</p></div></div><div className="activity-list">{punches.filter((p) => new Date(p.date).getTime() >= Date.now() - 7 * 86400000).slice(0, 30).map((punch) => <div className="activity face-activity" key={punch.id}><div className="activity-dot" /><div className="activity-body"><strong>{punch.employee}</strong><span>{punch.action} · {punch.date} · {punch.faceVerified ? "Face verified " + punch.faceConfidence.toFixed(1) + "%" : "Manual web punch"}</span></div><time>{punch.time}</time></div>)}</div></div></div></PageFrame>;
+  return <PageFrame title="Attendance" subtitle="View and manage attendance"><div className="attendance-filters"><label className="date-filter">Date<input type="date" value={date} onChange={(e) => onDate(e.target.value)} /></label><label className="date-filter">Store<select className="filter-select" value={storeFilter} onChange={(e) => onStore(e.target.value)}><option>All Locations</option>{locations.map((l) => <option key={l}>{l}</option>)}</select></label></div><div className="attendance-layout"><div className="panel"><div className="panel-header"><div><h3>Attendance for {date}</h3><p>Admin can manually record any punch.</p></div></div><div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>STATUS</th><th>SHIFT IN</th><th>WORKED</th><th>ACTIONS</th></tr></thead><tbody>{employees.map((person) => <tr key={person.id}><td onClick={() => onSelect(person)} className="clickable-cell"><div className="employee-cell"><div className="avatar small">{person.avatar}</div><div><strong>{person.name}</strong><small>{person.id} · {person.designation || "Employee"}</small></div></div></td><td><StatusBadge status={person.late ? "Late" : person.status} /></td><td>{person.shiftIn}</td><td>{formatHours(calculateWorkedMinutes(person.id, date, punches))}</td><td><div className="action-row">{(() => { const day = punches.filter(p => p.employeeId === person.id && p.date === date); const open = day.some(p => p.action === "Shift In") && !day.some(p => p.action === "Shift Out"); return <button className="table-action" onClick={() => onPunch(person.id, open ? "Shift Out" : "Shift In")}>{open ? "Shift Out" : "Shift In"}</button>; })()}</div></td></tr>)}</tbody></table></div></div><div className="panel"><div className="panel-header"><div><h3>Punch & face verification log</h3><p>Last 7 days of recorded punch metadata</p></div></div><div className="activity-list">{punches.filter((p) => new Date(p.date).getTime() >= Date.now() - 7 * 86400000).slice(0, 30).map((punch) => <div className="activity face-activity" key={punch.id}><div className="activity-dot" /><div className="activity-body"><strong>{punch.employee}</strong><span>{punch.action} · {punch.date} · {punch.faceVerified ? "Face verified " + punch.faceConfidence.toFixed(1) + "%" : "Manual web punch"}</span></div><time>{punch.time}</time></div>)}</div></div></div></PageFrame>;
 }
 
-function ReportsPage({ employees }: { employees: Employee[] }) {
-  const present = employees.filter((e) => e.status === "Present").length;
-  const breaks = employees.filter((e) => e.status === "On Break").length;
-  return <PageFrame title="Reports" subtitle="Attendance summaries and exports"><div className="report-grid"><div className="report-card"><span>Present today</span><strong>{present}</strong><small>Employees currently working</small></div><div className="report-card"><span>On break</span><strong>{breaks}</strong><small>Employees currently away</small></div><div className="report-card"><span>Total employees</span><strong>{employees.length}</strong><small>Active employee records</small></div></div><div className="panel report-panel"><div className="panel-header"><div><h3>Attendance report</h3><p>Export will be connected to Supabase/Excel after backend setup.</p></div><button className="secondary-button" onClick={() => alert("Export will be connected to the real database next.")}>Export Report</button></div></div></PageFrame>;
+function ReportsPage({ employees, punches, rules }: { employees: Employee[]; punches: Punch[]; rules: Rules }) {
+  const [mode, setMode] = useState<"daily" | "monthly">("daily");
+  const [date, setDate] = useState(localDate());
+  const periodStart = new Date(); periodStart.setDate(21); periodStart.setMonth(periodStart.getMonth() - 1);
+  const periodEnd = new Date(); periodEnd.setDate(20);
+  const dates: string[] = [];
+  for (let d = new Date(periodStart); d <= periodEnd; d.setDate(d.getDate() + 1)) dates.push(d.toISOString().slice(0,10));
+  const dailyRows = employees.map(e => {
+    const events = punches.filter(p => p.employeeId === e.id && p.date === date).sort((a,b)=>timeToMinutes(a.time)-timeToMinutes(b.time));
+    return { e, firstIn: events.find(p=>p.action==="Shift In")?.time || "—", lastOut: [...events].reverse().find(p=>p.action==="Shift Out")?.time || "—" };
+  });
+  return <PageFrame title="Reports" subtitle="Attendance reports use a 21st-to-20th monthly cycle"><div className="report-tabs"><button className={mode==="daily"?"active":""} onClick={()=>setMode("daily")}>Daily Report</button><button className={mode==="monthly"?"active":""} onClick={()=>setMode("monthly")}>Monthly Attendance</button></div>{mode==="daily" ? <div className="panel"><div className="panel-header"><div><h3>Daily attendance</h3><p>Employee first-in and last-out for the selected date.</p></div><input type="date" value={date} onChange={e=>setDate(e.target.value)} /></div><div className="table-wrap"><table><thead><tr><th>EMP ID</th><th>NAME</th><th>DESIGNATION</th><th>DESIGNATED LOCATION</th><th>ROLE</th><th>FIRST IN</th><th>LAST OUT</th></tr></thead><tbody>{dailyRows.map(({e,firstIn,lastOut})=><tr key={e.id}><td>{e.id}</td><td>{e.name}</td><td>{e.designation||"—"}</td><td>{e.location}</td><td>{e.role||"Employee"}</td><td>{firstIn}</td><td>{lastOut}</td></tr>)}</tbody></table></div></div> : <div className="panel"><div className="panel-header"><div><h3>Monthly attendance · {periodStart.toLocaleDateString("en-IN",{day:"2-digit",month:"short"})} to {periodEnd.toLocaleDateString("en-IN",{day:"2-digit",month:"short"})}</h3><p>Present includes completed full days and half days separately; no week-offs are applied.</p></div></div><div className="table-wrap"><table><thead><tr><th>EMP ID</th><th>NAME</th><th>ROLE</th><th>TOTAL PRESENT DAYS</th><th>PRESENT</th><th>HALF</th><th>ABSENT</th>{dates.map(d=><th key={d}>{new Date(d+"T00:00:00").getDate()} {new Date(d+"T00:00:00").toLocaleDateString("en-IN",{month:"short"})}</th>)}</tr></thead><tbody>{employees.map(e=>{let present=0,half=0,absent=0; const cells=dates.map(d=>{const s=statusForDate(e,d,punches,rules).status;if(s==="Half Day"){half++;return "H"} if(s==="Absent"){absent++;return "A"} if(s==="Present"){present++;return "P"} return "A"}); return <tr key={e.id}><td>{e.id}</td><td>{e.name}</td><td>{e.role||"Employee"}</td><td>{present+half}</td><td>{present}</td><td>{half}</td><td>{absent}</td>{cells.map((v,i)=><td key={dates[i]}>{v}</td>)}</tr>})}</tbody></table></div></div>}</PageFrame>;
 }
 
 function UsersPage() {
@@ -412,7 +446,7 @@ function SettingsPage({ rules, setRules }: { rules: Rules; setRules: (r: Rules) 
 }
 
 function EmployeeForm({ locations, onClose, onSubmit }: { locations: string[]; onClose: () => void; onSubmit: (e: FormEvent<HTMLFormElement>) => void }) {
-  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal wide-modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-header"><div><h3>Add Employee</h3><p>Basic employee record. Full legal-data import is supported through Excel.</p></div><button className="close-button" onClick={onClose}>×</button></div><form onSubmit={onSubmit}><div className="form-grid"><Field label="Full name" name="name" required /><Field label="Phone" name="phone" /><Field label="Email" name="email" type="email" /><Field label="Designation" name="designation" /><Field label="Department" name="department" /><Field label="Joining date" name="joiningDate" type="date" /><label className="field-label">Location<select name="location">{locations.map((l) => <option key={l}>{l}</option>)}<option>Head Office</option></select></label></div><div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">Create Employee</button></div></form></div></div>;
+  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal wide-modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-header"><div><h3>Add Employee</h3><p>Assign the employee's default shift during creation.</p></div><button className="close-button" onClick={onClose}>×</button></div><form onSubmit={onSubmit}><div className="form-grid"><Field label="Full name" name="name" required /><Field label="Phone" name="phone" /><Field label="Email" name="email" type="email" /><Field label="Designation" name="designation" /><Field label="Department" name="department" /><Field label="Joining date" name="joiningDate" type="date" /><label className="field-label">Location<select name="location">{locations.map((l) => <option key={l}>{l}</option>)}<option>Head Office</option></select></label><Field label="Shift starts" name="shiftStart" type="time" value="09:00" /><Field label="Shift ends" name="shiftEnd" type="time" value="18:00" /></div><div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">Create Employee</button></div></form></div></div>;
 }
 
 function ImportHelp({ onClose, onChoose }: { onClose: () => void; onChoose: () => void }) {
@@ -423,11 +457,14 @@ function UserForm({ roles, onClose, onSubmit }: { roles: string[]; onClose: () =
   return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-header"><div><h3>Add System User</h3><p>Create a user and assign a role/location scope.</p></div><button className="close-button" onClick={onClose}>×</button></div><form onSubmit={onSubmit}><label className="field-label">Name<input name="name" required placeholder="e.g. Priya HR" /></label><label className="field-label">Email<input name="email" type="email" required placeholder="name@mahamart.com" /></label><label className="field-label">Role<select name="role">{roles.map((r) => <option key={r}>{r}</option>)}</select></label><label className="field-label">Location scope<select name="location"><option>All Locations</option><option>Head Office</option><option>Store 1</option><option>Store 2</option></select></label><div className="modal-actions"><button type="button" className="secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="primary-button">Create User</button></div></form></div></div>;
 }
 
-function EmployeeDetail({ employee, punches, onClose }: { employee: Employee; punches: Punch[]; onClose: () => void }) {
+function EmployeeDetail({ employee, punches, onClose, onBreak }: { employee: Employee; punches: Punch[]; onClose: () => void; onBreak: (employeeId: string, remarks: string) => void }) {
   const [date, setDate] = useState(localDate());
+  const [showBreak, setShowBreak] = useState(false);
+  const [remarks, setRemarks] = useState("");
   const events = punches.filter((p) => p.employeeId === employee.id && p.date === date).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   const worked = calculateWorkedMinutes(employee.id, date, punches);
-  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal xl-modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-header"><div className="employee-detail-title"><div className="avatar">{employee.avatar}</div><div><h3>{employee.name}</h3><p>{employee.id} · {employee.location} · {employee.designation || "Employee"}</p></div></div><button className="close-button" onClick={onClose}>×</button></div><div className="employee-detail-grid"><div className="detail-card"><strong>Working hours</strong><span>{formatHours(worked)}</span></div><div className="detail-card"><strong>Status</strong><span>{employee.late ? "Late" : employee.status}</span></div><div className="detail-card"><strong>Date</strong><span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></span></div></div><h4>Punches & face verification</h4><div className="table-wrap"><table><thead><tr><th>ACTION</th><th>TIME</th><th>DATE</th><th>FACE</th><th>SOURCE</th></tr></thead><tbody>{events.length ? events.map((p) => <tr key={p.id}><td>{p.action}</td><td>{p.time}</td><td>{p.date}</td><td>{p.faceVerified ? "Verified · " + p.faceConfidence.toFixed(1) + "%" : "Manual web"}</td><td>{p.source}</td></tr>) : <tr><td colSpan={5}>No punches for this date.</td></tr>}</tbody></table></div><p className="privacy-note">The web app shows verification metadata here. Raw facial images/biometric templates should remain protected in the backend and should not be exposed in the admin table.</p></div></div>;
+  const hasOpenShift = events.some(p => p.action === "Shift In") && !events.some(p => p.action === "Shift Out");
+  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal xl-modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-header"><div className="employee-detail-title"><div className="avatar">{employee.avatar}</div><div><h3>{employee.name}</h3><p>{employee.id} · {employee.location} · {employee.designation || "Employee"} · {employee.shiftStart || "09:00"}-{employee.shiftEnd || "18:00"}</p></div></div><button className="close-button" onClick={onClose}>×</button></div><div className="employee-detail-grid"><div className="detail-card"><strong>Working hours</strong><span>{formatHours(worked)}</span></div><div className="detail-card"><strong>Status</strong><span>{employee.late ? "Late" : employee.status}</span></div><div className="detail-card"><strong>Shift</strong><span>{employee.shiftStart || "09:00"} - {employee.shiftEnd || "18:00"}</span></div><div className="detail-card"><strong>Date</strong><span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></span></div></div><div className="modal-actions"><button className="secondary-button" disabled={!hasOpenShift} onClick={() => setShowBreak(true)}>Admin: Create Break</button></div><h4>Punches & verification</h4><div className="table-wrap"><table><thead><tr><th>ACTION</th><th>TIME</th><th>DATE</th><th>FACE</th><th>SOURCE</th></tr></thead><tbody>{events.length ? events.map((p) => <tr key={p.id}><td>{p.action}</td><td>{p.time}</td><td>{p.date}</td><td>{p.faceVerified ? "Verified · " + p.faceConfidence.toFixed(1) + "%" : "Manual web"}</td><td>{p.source}</td></tr>) : <tr><td colSpan={5}>No punches for this date.</td></tr>}</tbody></table></div><p className="privacy-note">Employees only use Shift In/Out. Breaks are created by admin; the mobile kiosk will later provide Break In for the employee.</p>{showBreak&&<div className="modal-backdrop nested" onMouseDown={()=>setShowBreak(false)}><div className="modal" onMouseDown={e=>e.stopPropagation()}><div className="modal-header"><div><h3>Create break</h3><p>Record an authorized break for {employee.name}.</p></div><button className="close-button" onClick={()=>setShowBreak(false)}>×</button></div><label className="field-label">Remarks<textarea value={remarks} onChange={e=>setRemarks(e.target.value)} placeholder="Reason / permission details" /></label><div className="modal-actions"><button className="secondary-button" onClick={()=>setShowBreak(false)}>Cancel</button><button className="primary-button" onClick={()=>{onBreak(employee.id,remarks);setShowBreak(false);setRemarks("");}}>Start Break</button></div></div></div>}</div></div>;
 }
 
 function Field({ label, name, type = "text", value, onChange, required }: { label: string; name?: string; type?: string; value?: string; onChange?: (v: string) => void; required?: boolean }) {

@@ -281,7 +281,7 @@ export default function Dashboard() {
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[workbook.SheetNames[0]], { defval: "" });
-      const imported: Employee[] = rows.map((row, index) => {
+      const imported: Employee[] = rows.map((row, index): Employee => {
         const get = (keys: string[]) => {
           const key = Object.keys(row).find((k) => keys.includes(k.toLowerCase().replace(/\s+/g, "")));
           return key ? String(row[key]) : "";

@@ -11,6 +11,9 @@ create table if not exists public.shifts (
 );
 
 alter table public.employees add column if not exists shift_id uuid references public.shifts(id) on delete set null;
+alter table public.employees add column if not exists remote_punch_allowed boolean not null default false;
+alter table public.attendance_punches add column if not exists punch_location_name text;
+alter table public.attendance_punches add column if not exists punch_mode text not null default 'Kiosk';
 alter table public.locations add column if not exists latitude numeric(10,7);
 alter table public.locations add column if not exists longitude numeric(10,7);
 alter table public.locations add column if not exists geofence_radius_m integer not null default 150;

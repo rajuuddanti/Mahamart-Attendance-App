@@ -123,6 +123,26 @@ function timeToMinutes(value: string) {
   return hour * 60 + minute;
 }
 
+function scheduleTimeToMinutes(value: string) {
+  const parts = value.split(":").map(Number);
+  return (parts[0] || 0) * 60 + (parts[1] || 0);
+}
+
+function statusForDate(employee: Employee, date: string, punches: Punch[], rules: Rules) {
+  const events = punches.filter((p) => p.employeeId === employee.id && p.date === date).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+  const shiftIn = events.find((p) => p.action === "Shift In");
+  const last = events[events.length - 1];
+  if (!shiftIn) return { status: "Not Checked In" as Employee["status"], late: false, shiftIn: "—" };
+  const late = timeToMinutes(shiftIn.time) > scheduleTimeToMinutes(rules.shiftStart) + Number(rules.grace);
+  if (last && last.action === "Break Out") return { status: "On Break" as Employee["status"], late, shiftIn: shiftIn.time };
+  if (last && last.action === "Shift Out" && rules.workingHoursEnabled) {
+    const worked = calculateWorkedMinutes(employee.id, date, punches);
+    if (worked < Number(rules.absentHours) * 60) return { status: "Absent" as Employee["status"], late, shiftIn: shiftIn.time };
+    if (worked < Number(rules.halfDayHours) * 60) return { status: "Half Day" as Employee["status"], late, shiftIn: shiftIn.time };
+  }
+  return { status: "Present" as Employee["status"], late, shiftIn: shiftIn.time };
+}
+
 function calculateWorkedMinutes(employeeId: string, date: string, punches: Punch[]) {
   const events = punches.filter((p) => p.employeeId === employeeId && p.date === date).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   let total = 0;
@@ -224,7 +244,7 @@ export default function Dashboard() {
     if (action === "Shift In") {
       status = "Present";
       const currentMinutes = timeToMinutes(time);
-      const shiftMinutes = timeToMinutes(rules.shiftStart + (Number(rules.shiftStart.split(":")[0]) >= 12 ? " PM" : " AM"));
+      const shiftMinutes = scheduleTimeToMinutes(rules.shiftStart);
       late = currentMinutes > shiftMinutes + Number(rules.grace);
     }
     if (action === "Shift Out") {
@@ -333,7 +353,8 @@ export default function Dashboard() {
 }
 
 function DashboardPage({ stats, employees, punches, date, onDate, onAdd, onGo }: { stats: { present: number; absent: number; break: number; notIn: number; late: number }; employees: Employee[]; punches: Punch[]; date: string; onDate: (date: string) => void; onAdd: () => void; onGo: (label: string) => void }) {
-  const lateEmployees = employees.filter((e) => e.late);
+  const selected = employees.map((employee) => ({ employee, ...statusForDate(employee, date, punches, defaultRules) }));
+  const lateEmployees = selected.filter((x) => x.late).map((x) => ({ ...x.employee, late: x.late }));
   return <>
     <div className="welcome-row"><div><h2>Good morning, Admin 👋</h2><p>Attendance overview for the selected date.</p></div><div className="page-actions"><label className="date-filter">Date<input type="date" value={date} onChange={(e) => onDate(e.target.value)} /></label><button className="primary-button" onClick={onAdd}>+ Add Employee</button></div></div>
     <section className="stats-grid"><StatCard label="Present" value={String(stats.present)} detail="Working / completed" icon="✓" tone="green" /><StatCard label="Absent" value={String(stats.absent)} detail="Marked absent" icon="×" tone="red" /><StatCard label="On Break" value={String(stats.break)} detail="Currently away" icon="◌" tone="orange" /><StatCard label="Not Checked In" value={String(stats.notIn)} detail="Expected today" icon="○" tone="blue" /><StatCard label="Late Arrivals" value={String(stats.late)} detail="After grace period" icon="!" tone="purple" /></section>
@@ -357,7 +378,7 @@ function LocationsPage({ locations, employees, onAdd }: { locations: string[]; e
 
 function AttendancePage({ employees, punches, date, onDate, storeFilter, locations, onStore, onPunch }: { employees: Employee[]; punches: Punch[]; date: string; onDate: (v: string) => void; storeFilter: string; locations: string[]; onStore: (v: string) => void; onPunch: (id: string, action: Punch["action"]) => void }) {
   const visiblePunches = punches.filter((p) => p.date === date && (storeFilter === "All Locations" || employees.find((e) => e.id === p.employeeId)?.location === storeFilter));
-  return <PageFrame title="Attendance" subtitle="View and manage attendance"><div className="attendance-filters"><label className="date-filter">Date<input type="date" value={date} onChange={(e) => onDate(e.target.value)} /></label><label className="date-filter">Store<select className="filter-select" value={storeFilter} onChange={(e) => onStore(e.target.value)}><option>All Locations</option>{locations.map((l) => <option key={l}>{l}</option>)}</select></label></div><div className="attendance-layout"><div className="panel"><div className="panel-header"><div><h3>Attendance for {date}</h3><p>Admin can manually record any punch.</p></div></div><div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>STATUS</th><th>SHIFT IN</th><th>WORKED</th><th>ACTIONS</th></tr></thead><tbody>{employees.map((person) => <tr key={person.id}><td><div className="employee-cell"><div className="avatar small">{person.avatar}</div><div><strong>{person.name}</strong><small>{person.id}</small></div></div></td><td><StatusBadge status={person.late ? "Late" : person.status} /></td><td>{person.shiftIn}</td><td>{formatHours(calculateWorkedMinutes(person.id, date, punches))}</td><td><div className="action-row"><button className="table-action" onClick={() => onPunch(person.id, "Shift In")}>Shift In</button><button className="table-action" onClick={() => onPunch(person.id, "Break Out")}>Break Out</button><button className="table-action" onClick={() => onPunch(person.id, "Break In")}>Break In</button><button className="table-action" onClick={() => onPunch(person.id, "Shift Out")}>Shift Out</button></div></td></tr>)}</tbody></table></div></div><div className="panel"><div className="panel-header"><div><h3>Punch & face verification log</h3><p>Last 7 days of recorded punch metadata</p></div></div><div className="activity-list">{punches.filter((p) => new Date(p.date).getTime() >= Date.now() - 7 * 86400000).slice(0, 30).map((punch) => <div className="activity face-activity\" key={punch.id}><div className="activity-dot" /><div className="activity-body"><strong>{punch.employee}</strong><span>{punch.action} · {punch.date} · {punch.faceVerified ? "Face verified " + punch.faceConfidence.toFixed(1) + "%" : "Manual web punch"}</span></div><time>{punch.time}</time></div>)}</div></div></div></PageFrame>;
+  return <PageFrame title="Attendance" subtitle="View and manage attendance"><div className="attendance-filters"><label className="date-filter">Date<input type="date" value={date} onChange={(e) => onDate(e.target.value)} /></label><label className="date-filter">Store<select className="filter-select" value={storeFilter} onChange={(e) => onStore(e.target.value)}><option>All Locations</option>{locations.map((l) => <option key={l}>{l}</option>)}</select></label></div><div className="attendance-layout"><div className="panel"><div className="panel-header"><div><h3>Attendance for {date}</h3><p>Admin can manually record any punch.</p></div></div><div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>STATUS</th><th>SHIFT IN</th><th>WORKED</th><th>ACTIONS</th></tr></thead><tbody>{employees.map((person) => <tr key={person.id}><td><div className="employee-cell"><div className="avatar small">{person.avatar}</div><div><strong>{person.name}</strong><small>{person.id}</small></div></div></td><td><StatusBadge status={person.late ? "Late" : person.status} /></td><td>{person.shiftIn}</td><td>{formatHours(calculateWorkedMinutes(person.id, date, punches))}</td><td><div className="action-row"><button className="table-action" onClick={() => onPunch(person.id, "Shift In")}>Shift In</button><button className="table-action" onClick={() => onPunch(person.id, "Break Out")}>Break Out</button><button className="table-action" onClick={() => onPunch(person.id, "Break In")}>Break In</button><button className="table-action" onClick={() => onPunch(person.id, "Shift Out")}>Shift Out</button></div></td></tr>)}</tbody></table></div></div><div className="panel"><div className="panel-header"><div><h3>Punch & face verification log</h3><p>Last 7 days of recorded punch metadata</p></div></div><div className="activity-list">{punches.filter((p) => new Date(p.date).getTime() >= Date.now() - 7 * 86400000).slice(0, 30).map((punch) => <div className="activity face-activity" key={punch.id}><div className="activity-dot" /><div className="activity-body"><strong>{punch.employee}</strong><span>{punch.action} · {punch.date} · {punch.faceVerified ? "Face verified " + punch.faceConfidence.toFixed(1) + "%" : "Manual web punch"}</span></div><time>{punch.time}</time></div>)}</div></div></div></PageFrame>;
 }
 
 function ReportsPage({ employees }: { employees: Employee[] }) {

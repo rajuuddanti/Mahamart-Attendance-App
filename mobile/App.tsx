@@ -11,7 +11,7 @@ const supabase=createClient(
   {auth:{storage:localStorage,autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}}
 );
 
-type Employee={id:string;employee_code:string;full_name:string;location_id:string|null};
+type Employee={id:string;employee_code:string;full_name:string;location_id:string|null;remote_punch_allowed:boolean};
 type Punch={id:string;employee_id:string;action:string;punched_at:string;face_verified:boolean;face_confidence:number|null};
 type Break={id:string;employee_id:string;started_at:string;ended_at:string|null;remarks:string|null};
 type Place={id:string;name:string;latitude:number|null;longitude:number|null;geofence_radius_m:number};
@@ -32,13 +32,14 @@ export default function App(){
  const [breaks,setBreaks]=useState<Break[]>([]);
  const [selected,setSelected]=useState<Employee|null>(null);
  const [loading,setLoading]=useState(false);
+ const [punchPlace,setPunchPlace]=useState<string>('');
 
  useEffect(()=>{supabase.auth.getSession().then(({data})=>setSession(data.session)); const {data}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s)); return()=>data.subscription.unsubscribe()},[]);
  useEffect(()=>{if(session) loadData()},[session]);
 
- async function signIn(){setLoading(true);const {error}=await supabase.auth.signInWithPassword({email,password});setLoading(false);if(error)Alert.alert('Sign in failed',error.message)}
+ async function signIn(){setLoading(true);const {error}=await supabase.auth.signInWithPassword({email,password});setPunchPlace(geo.name);setLoading(false);if(error)Alert.alert('Sign in failed',error.message)}
  async function loadData(){
-   const {data:es,error:e}=await supabase.from('employees').select('id,employee_code,full_name,location_id').eq('active',true).order('full_name');
+   const {data:es,error:e}=await supabase.from('employees').select('id,employee_code,full_name,location_id,remote_punch_allowed').eq('active',true).order('full_name');
    if(e){Alert.alert('Database error',e.message);return}
    setEmployees(es||[]);
    if(es?.[0]) setSelected(es[0]);
@@ -56,23 +57,27 @@ export default function App(){
  const selectedPlace=selected?locations.find(l=>l.id===selected.location_id):undefined;
 
  async function verifyGeo(){
-   if(!selectedPlace?.latitude||!selectedPlace?.longitude) return true;
    const perm=await Location.requestForegroundPermissionsAsync();
-   if(perm.status!=='granted'){Alert.alert('Location required','Allow location access so the kiosk can verify the employee is at the assigned location.');return false}
+   if(perm.status!=='granted'){Alert.alert('Location required','Allow location access so the kiosk can record the punch location.');return null}
    const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.High});
+   if(!selectedPlace?.latitude||!selectedPlace?.longitude){
+     return {latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy||null,name:'Remote'};
+   }
    const d=distanceMeters(pos.coords.latitude,pos.coords.longitude,selectedPlace.latitude,selectedPlace.longitude);
-   if(d>selectedPlace.geofence_radius_m){Alert.alert('Outside allowed location',`${selected.full_name} is ${Math.round(d)}m from ${selectedPlace.name}. Allowed radius: ${selectedPlace.geofence_radius_m}m.`);return false}
-   return true;
+   if(d<=selectedPlace.geofence_radius_m) return {latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy||null,name:selectedPlace.name};
+   if(selected?.remote_punch_allowed) return {latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy||null,name:'Remote'};
+   Alert.alert('Outside allowed location',`${selected.full_name} is ${Math.round(d)}m from ${selectedPlace.name}. Remote punch is not enabled for this employee.`);
+   return null;
  }
 
  async function punch(action:'Shift In'|'Shift Out'){
    if(!selected||!session) return;
    if(action==='Shift In'&&openShift){Alert.alert('Already checked in','Only Shift Out is available now.');return}
    if(action==='Shift Out'&&!openShift){Alert.alert('Not checked in','Only Shift In is available now.');return}
-   if(!(await verifyGeo())) return;
+   const geo=await verifyGeo(); if(!geo) return;
    setLoading(true);
    const profile=(await supabase.from('profiles').select('company_id').eq('id',session.user.id).single()).data;
-   const {error}=await supabase.from('attendance_punches').insert({company_id:profile?.company_id,employee_id:selected.id,location_id:selected.location_id,action,source:'Kiosk',created_by:session.user.id,face_verified:false});
+   const {error}=await supabase.from('attendance_punches').insert({company_id:profile?.company_id,employee_id:selected.id,location_id:selected.location_id,action,source:'Kiosk',created_by:session.user.id,face_verified:false,latitude:geo.latitude,longitude:geo.longitude,accuracy_m:geo.accuracy,geo_verified:true,punch_location_name:geo.name,punch_mode:selected.remote_punch_allowed?'Remote/Kiosk':'Kiosk'});
    setLoading(false);
    if(error) Alert.alert('Punch failed',error.message); else {Alert.alert('Recorded',action+' recorded for '+selected.full_name);loadData()}
  }

@@ -201,13 +201,16 @@ export default function Dashboard() {
 
   const locations = Array.from(new Set(employees.map((e) => e.location))).filter(Boolean);
 
-  const stats = useMemo(() => ({
-    present: employees.filter((e) => e.status === "Present" || e.status === "Half Day").length,
-    absent: employees.filter((e) => e.status === "Absent").length,
-    break: employees.filter((e) => e.status === "On Break").length,
-    notIn: employees.filter((e) => e.status === "Not Checked In").length,
-    late: employees.filter((e) => e.late && e.status !== "Absent").length,
-  }), [employees]);
+  const stats = useMemo(() => {
+    const selected = employees.map((employee) => statusForDate(employee, dateFilter, punches, rules));
+    return {
+      present: selected.filter((e) => e.status === "Present" || e.status === "Half Day").length,
+      absent: selected.filter((e) => e.status === "Absent").length,
+      break: selected.filter((e) => e.status === "On Break").length,
+      notIn: selected.filter((e) => e.status === "Not Checked In").length,
+      late: selected.filter((e) => e.late && e.status !== "Absent").length,
+    };
+  }, [employees, punches, rules, dateFilter]);
 
   const filteredEmployees = employees.filter((employee) =>
     (storeFilter === "All Locations" || employee.location === storeFilter) &&
@@ -333,7 +336,7 @@ export default function Dashboard() {
         </header>
 
         <div className="page">
-          {active === "Dashboard" && <DashboardPage stats={stats} employees={employees} punches={datePunches} date={dateFilter} onDate={setDateFilter} onAdd={() => setShowAdd(true)} onGo={goTo} />}
+          {active === "Dashboard" && <DashboardPage stats={stats} employees={employees} punches={datePunches} rules={rules} date={dateFilter} onDate={setDateFilter} onAdd={() => setShowAdd(true)} onGo={goTo} />}
           {active === "Employees" && <EmployeesPage employees={filteredEmployees} allEmployees={employees} search={search} storeFilter={storeFilter} locations={locations} onSearch={setSearch} onStore={setStoreFilter} onAdd={() => setShowAdd(true)} onImport={() => setShowImport(true)} onSelect={setSelectedEmployee} />}
           {active === "Locations" && <LocationsPage locations={locations} employees={employees} onAdd={() => alert("Location creation will be connected to Supabase next.")} />}
           {active === "Attendance" && <AttendancePage employees={filteredEmployees} punches={punches} date={dateFilter} onDate={setDateFilter} storeFilter={storeFilter} locations={locations} onStore={setStoreFilter} onPunch={punchEmployee} />}
@@ -352,8 +355,8 @@ export default function Dashboard() {
   );
 }
 
-function DashboardPage({ stats, employees, punches, date, onDate, onAdd, onGo }: { stats: { present: number; absent: number; break: number; notIn: number; late: number }; employees: Employee[]; punches: Punch[]; date: string; onDate: (date: string) => void; onAdd: () => void; onGo: (label: string) => void }) {
-  const selected = employees.map((employee) => ({ employee, ...statusForDate(employee, date, punches, defaultRules) }));
+function DashboardPage({ stats, employees, punches, rules, date, onDate, onAdd, onGo }: { stats: { present: number; absent: number; break: number; notIn: number; late: number }; employees: Employee[]; punches: Punch[]; rules: Rules; date: string; onDate: (date: string) => void; onAdd: () => void; onGo: (label: string) => void }) {
+  const selected = employees.map((employee) => ({ employee, ...statusForDate(employee, date, punches, rules) }));
   const lateEmployees = selected.filter((x) => x.late).map((x) => ({ ...x.employee, late: x.late }));
   return <>
     <div className="welcome-row"><div><h2>Good morning, Admin 👋</h2><p>Attendance overview for the selected date.</p></div><div className="page-actions"><label className="date-filter">Date<input type="date" value={date} onChange={(e) => onDate(e.target.value)} /></label><button className="primary-button" onClick={onAdd}>+ Add Employee</button></div></div>

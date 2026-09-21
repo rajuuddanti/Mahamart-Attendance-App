@@ -132,3 +132,19 @@ td { padding:13px 20px; border-top:1px solid #f0f2f4; color:#65717d; font-size:1
 .quick-card:hover { border-color:#cfe1d8; transform:translateY(-1px); }
 @media (max-width:1000px) { .attendance-layout, .settings-grid { grid-template-columns:1fr; } .location-grid { grid-template-columns:1fr 1fr; } .report-grid { grid-template-columns:1fr 1fr; } }
 @media (max-width:700px) { .page-title-row { align-items:flex-start; flex-direction:column; } .location-grid, .report-grid { grid-template-columns:1fr; } .toolbar { align-items:stretch; flex-direction:column; } .search-input { max-width:none; } .action-row { min-width:0; flex-wrap:wrap; } }
+
+
+.role-layout { display:grid; grid-template-columns:minmax(0,2fr) minmax(320px,1fr); gap:18px; }
+.card-description { color:var(--muted); font-size:10px; line-height:1.55; margin:6px 0 16px; }
+.field-label { display:flex; flex-direction:column; gap:6px; color:#52606c; font-size:10px; font-weight:700; margin-bottom:12px; }
+.role-select, .field-label input { border:1px solid var(--line); background:#fff; border-radius:8px; padding:10px; font:inherit; font-size:12px; outline:none; }
+.role-select:focus, .field-label input:focus { border-color:#9bc9b5; box-shadow:0 0 0 3px #e7f4ee; }
+.permission-list { border-top:1px solid var(--line); margin-top:12px; }
+.permission-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f0f2f4; font-size:10px; }
+.permission-on { color:#247c59; background:#eaf6f0; padding:4px 7px; border-radius:12px; font-weight:700; }
+.permission-off { color:#b64e46; background:#fbeceb; padding:4px 7px; border-radius:12px; font-weight:700; }
+.rules-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.rule-fields { display:grid; grid-template-columns:1fr 1fr; gap:4px 14px; }
+.save-rules { margin-top:8px; }
+@media (max-width:1000px) { .role-layout, .rules-grid { grid-template-columns:1fr; } }
+@media (max-width:700px) { .rule-fields { grid-template-columns:1fr; } }

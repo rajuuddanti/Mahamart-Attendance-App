@@ -264,7 +264,7 @@ export default function Dashboard() {
     if (action === "Break In") status = "Present";
 
     setEmployees((current) => current.map((item) => item.id === employeeId ? { ...item, status, shiftIn: action === "Shift In" ? time : item.shiftIn, late } : item));
-    setPunches((current) => [{ id: Date.now().toString(), employeeId, employee: employee.name, action, time, date, faceVerified: false, faceConfidence: 0, source: "Web Admin" }, ...current].slice(0, 500));
+    setPunches((current) => [{ id: Date.now().toString(), employeeId, employee: employee.name, action, time, date, faceVerified: false, faceConfidence: 0, source: "Web Admin" as const }, ...current].slice(0, 500));
   }
 
   function goTo(label: string) {

@@ -24,6 +24,7 @@ const navItems = [
   { label: "Attendance", icon: "◷" },
   { label: "Reports", icon: "▤" },
   { label: "Users & Roles", icon: "♙" },
+  { label: "Rules", icon: "◈" },
   { label: "Settings", icon: "⚙" },
 ];
 
@@ -181,6 +182,7 @@ export default function Dashboard() {
           {active === "Attendance" && <AttendancePage employees={employees} punches={punches} onPunch={punchEmployee} />}
           {active === "Reports" && <ReportsPage employees={employees} />}
           {active === "Users & Roles" && <UsersPage />}
+          {active === "Rules" && <RulesPage />}
           {active === "Settings" && <SettingsPage />}
         </div>
       </section>
@@ -223,14 +225,97 @@ function ReportsPage({ employees }: { employees: Employee[] }) {
 }
 
 function UsersPage() {
-  const [users, setUsers] = useState([{ name: "Raju", email: "admin@mahamart.com", role: "Company Admin", active: true }, { name: "Store Manager", email: "manager@mahamart.com", role: "Store Manager", active: true }]);
-  return <PageFrame title="Users & Roles" subtitle="Control who can access the admin system" action={<button className="primary-button" onClick={() => setUsers((u) => [...u, { name: "New User", email: "new@mahamart.com", role: "Supervisor", active: true }])}>+ Add User</button>}><div className="panel"><div className="table-wrap"><table><thead><tr><th>USER</th><th>EMAIL</th><th>ROLE</th><th>STATUS</th></tr></thead><tbody>{users.map((user) => <tr key={user.email}><td><strong>{user.name}</strong></td><td>{user.email}</td><td><span className="role-pill">{user.role}</span></td><td><StatusBadge status={user.active ? "Present" : "Absent"} /></td></tr>)}</tbody></table></div></div></PageFrame>;
+  const defaultUsers = [
+    { name: "Raju", email: "admin@mahamart.com", role: "Company Admin", location: "All Locations", active: true },
+    { name: "Store Manager", email: "manager@mahamart.com", role: "Store Manager", location: "Head Office", active: true },
+  ];
+  const roles = ["Super Admin", "Company Admin", "HR", "Store Manager", "Supervisor", "Employee"];
+  const permissions = ["View Employees", "Manage Employees", "View Attendance", "Edit Attendance", "View Reports", "Export Reports", "Manage Locations", "Manage Users", "Manage Rules"];
+  const [users, setUsers] = useState(defaultUsers);
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("Company Admin");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("mahamart-users");
+    if (saved) setUsers(JSON.parse(saved));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("mahamart-users", JSON.stringify(users));
+  }, [users]);
+
+  function addUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") || "").trim();
+    const email = String(form.get("email") || "").trim();
+    const role = String(form.get("role") || "Supervisor");
+    const location = String(form.get("location") || "Head Office");
+    if (!name || !email) return;
+    setUsers((current) => [...current, { name, email, role, location, active: true }]);
+    setShowUserForm(false);
+  }
+
+  return <PageFrame title="Users & Roles" subtitle="Control access, roles and location scope"
+    action={<button className="primary-button" onClick={() => setShowUserForm(true)}>+ Add User</button>}>
+    <div className="role-layout">
+      <div className="panel">
+        <div className="panel-header"><div><h3>System Users</h3><p>Admin accounts that can access the web app</p></div></div>
+        <div className="table-wrap"><table><thead><tr><th>USER</th><th>EMAIL</th><th>ROLE</th><th>LOCATION SCOPE</th><th>STATUS</th></tr></thead>
+          <tbody>{users.map((user) => <tr key={user.email}><td><strong>{user.name}</strong></td><td>{user.email}</td><td><span className="role-pill">{user.role}</span></td><td>{user.location}</td><td><StatusBadge status={user.active ? "Present" : "Absent"} /></td></tr>)}</tbody>
+        </table></div>
+      </div>
+      <div className="settings-card">
+        <h3>Role permissions</h3>
+        <p className="card-description">Review what each role can access. We will enforce these permissions through Supabase when the backend is connected.</p>
+        <label className="field-label">Select role<select className="role-select" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}>{roles.map((role) => <option key={role}>{role}</option>)}</select></label>
+        <div className="permission-list">{permissions.map((permission) => {
+          const restricted = selectedRole === "Employee" && ["Manage Employees", "Edit Attendance", "Export Reports", "Manage Locations", "Manage Users", "Manage Rules"].includes(permission);
+          return <div className="permission-row" key={permission}><span>{permission}</span><span className={restricted ? "permission-off" : "permission-on"}>{restricted ? "No" : "Yes"}</span></div>;
+        })}</div>
+      </div>
+    </div>
+    {showUserForm && <div className="modal-backdrop" onMouseDown={() => setShowUserForm(false)}><div className="modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-header"><div><h3>Add System User</h3><p>Create an admin/staff login record.</p></div><button className="close-button" onClick={() => setShowUserForm(false)}>×</button></div><form onSubmit={addUser}><label>Name<input name="name" required placeholder="e.g. Priya HR" /></label><label>Email<input name="email" type="email" required placeholder="name@mahamart.com" /></label><label>Role<select name="role" defaultValue="Supervisor">{roles.map((role) => <option key={role}>{role}</option>)}</select></label><label>Location scope<select name="location"><option>All Locations</option><option>Head Office</option><option>Store 1</option><option>Store 2</option></select></label><div className="modal-actions"><button type="button" className="secondary-button" onClick={() => setShowUserForm(false)}>Cancel</button><button type="submit" className="primary-button">Create User</button></div></form></div></div>}
+  </PageFrame>;
+}
+
+function RulesPage() {
+  const defaults = { shiftStart: "09:00", shiftEnd: "18:00", grace: "15", absentAfter: "12:00", multipleBreaks: true, requireShiftOut: true, allowEarlyIn: true };
+  const [rules, setRules] = useState(defaults);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("mahamart-rules");
+    if (saved) setRules(JSON.parse(saved));
+  }, []);
+
+  function updateRule(key: keyof typeof defaults, value: string | boolean) {
+    setRules((current) => ({ ...current, [key]: value }));
+  }
+
+  function saveRules() {
+    localStorage.setItem("mahamart-rules", JSON.stringify(rules));
+    alert("Attendance rules saved for this prototype.");
+  }
+
+  return <PageFrame title="Attendance Rules" subtitle="Define how attendance should be interpreted">
+    <div className="rules-grid">
+      <div className="settings-card"><h3>Shift timing</h3><p className="card-description">Default rules for a standard working day. Location-specific rules can be added later.</p>
+        <div className="rule-fields"><label className="field-label">Shift starts<input type="time" value={rules.shiftStart} onChange={(e) => updateRule("shiftStart", e.target.value)} /></label><label className="field-label">Shift ends<input type="time" value={rules.shiftEnd} onChange={(e) => updateRule("shiftEnd", e.target.value)} /></label><label className="field-label">Grace period (minutes)<input type="number" min="0" value={rules.grace} onChange={(e) => updateRule("grace", e.target.value)} /></label><label className="field-label">Mark absent after<input type="time" value={rules.absentAfter} onChange={(e) => updateRule("absentAfter", e.target.value)} /></label></div>
+      </div>
+      <div className="settings-card"><h3>Attendance behavior</h3><p className="card-description">These controls will become backend rules after Supabase is connected.</p>
+        <SettingToggle label="Allow multiple breaks" description="No fixed number of break out/in events." enabled={rules.multipleBreaks} onChange={(v) => updateRule("multipleBreaks", v)} />
+        <SettingToggle label="Require Shift Out" description="Employees should record Shift Out before the day is complete." enabled={rules.requireShiftOut} onChange={(v) => updateRule("requireShiftOut", v)} />
+        <SettingToggle label="Allow early Shift In" description="Allow employees to punch before the scheduled shift start." enabled={rules.allowEarlyIn} onChange={(v) => updateRule("allowEarlyIn", v)} />
+        <button className="primary-button save-rules" onClick={saveRules}>Save Rules</button>
+      </div>
+    </div>
+  </PageFrame>;
 }
 
 function SettingsPage() {
   const [enabled, setEnabled] = useState(true);
   const [realtime, setRealtime] = useState(true);
-  return <PageFrame title="Settings" subtitle="Configure attendance behavior and application preferences"><div className="settings-grid"><div className="settings-card"><h3>Attendance Rules</h3><SettingToggle label="Allow multiple breaks" description="Employees can record any number of break out/in events." enabled={enabled} onChange={setEnabled} /><SettingToggle label="Realtime dashboard" description="Refresh live attendance activity without manual reload." enabled={realtime} onChange={setRealtime} /></div><div className="settings-card"><h3>Future Integrations</h3><div className="integration-row"><span>Supabase database</span><span className="coming">Next step</span></div><div className="integration-row"><span>Android kiosk + face recognition</span><span className="coming">Later</span></div><div className="integration-row"><span>Excel import / export</span><span className="coming">Later</span></div></div></div></PageFrame>;
+  return <PageFrame title="Settings" subtitle="Configure application preferences"><div className="settings-grid"><div className="settings-card"><h3>Application</h3><SettingToggle label="Realtime dashboard" description="Refresh live attendance activity without manual reload." enabled={realtime} onChange={setRealtime} /></div><div className="settings-card"><h3>System roadmap</h3><div className="integration-row"><span>Supabase database</span><span className="coming">Next step</span></div><div className="integration-row"><span>Android kiosk + face recognition</span><span className="coming">Later</span></div><div className="integration-row"><span>Excel import / export</span><span className="coming">Later</span></div></div></div></PageFrame>;
 }
 
 function SettingToggle({ label, description, enabled, onChange }: { label: string; description: string; enabled: boolean; onChange: (value: boolean) => void }) {

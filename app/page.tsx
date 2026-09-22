@@ -301,7 +301,7 @@ export default function Dashboard() {
     if (!companyId) return;
 
     const channel = supabase.channel("main-dashboard-attendance")
-      .on("postgres_changes", { event: "*", schema: "public", table: "attendance_punches" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "attendance_punches", filter: `company_id=eq.${companyId}` }, () => {
         setAttendanceRefresh((value) => value + 1);
       })
       .subscribe();

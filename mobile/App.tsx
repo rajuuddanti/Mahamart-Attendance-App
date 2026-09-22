@@ -37,7 +37,7 @@ export default function App(){
  useEffect(()=>{supabase.auth.getSession().then(({data})=>setSession(data.session)); const {data}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s)); return()=>data.subscription.unsubscribe()},[]);
  useEffect(()=>{if(session) loadData()},[session]);
 
- async function signIn(){setLoading(true);const {error}=await supabase.auth.signInWithPassword({email,password});setPunchPlace(geo.name);setLoading(false);if(error)Alert.alert('Sign in failed',error.message)}
+ async function signIn(){setLoading(true);const {error}=await supabase.auth.signInWithPassword({email,password});setLoading(false);if(error)Alert.alert('Sign in failed',error.message)}
  async function loadData(){
    const {data:es,error:e}=await supabase.from('employees').select('id,employee_code,full_name,location_id,remote_punch_allowed').eq('active',true).order('full_name');
    if(e){Alert.alert('Database error',e.message);return}

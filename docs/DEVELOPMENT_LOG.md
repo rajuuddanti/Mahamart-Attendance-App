@@ -63,3 +63,37 @@ Whenever the user says “bye”, update:
 - docs/DEVELOPMENT_LOG.md
 
 Record the latest completed work, database changes, decisions, bugs, current stop point and next restart steps, then commit the documentation so another ChatGPT account can resume from GitHub alone.
+
+
+## Full commit/history reference
+The repository history confirms the implementation sequence. Important commits:
+- 62e716a — attendance action button fixes
+- 844475b — interactive admin styling
+- e6319a3 — attendance rules and role management
+- fcad22f — role/rule styling
+- 5f28e6c — Excel import
+- 66d3266 — attendance rules, filters, employee records, punch history
+- 69cab11 — shift timing and selected-date attendance logic
+- 2d6763f — dashboard date-filter attendance counts
+- 876c841 — selected-date statuses
+- b9ea53f — styling for filters/employee details/import
+- 4301bed — live Supabase attendance schema
+- 12177d08 — Supabase-connected Android kiosk
+- d12a152 — Android Expo configuration
+- 654cd9d — Supabase-connected live attendance page
+- 58b4eb1 — Supabase JS dependency
+- 87f6af6 — exclude mobile from web TypeScript build
+- ca6fcd6 — shifts/geofencing/breaks/punch integrity
+- e21190d — attendance workflow/clickable management UI
+- 1fd99b1 — editable users/roles
+- 52423e3 — single Shift In/Out
+- 7f6dbe7 — Expo location
+- 31935a3 — In/Out + admin breaks + kiosk geofence
+- 2d05449 — remote punch/location fields
+- 8f12b8b — remote punch implementation
+- 4f342e4 — employee creation to Supabase
+- 5f33072 — project brain
+- ae07865 — architecture doc
+- 942788a — business rules doc
+- 4fb4ffb — database doc
+- 8eff920 — development log

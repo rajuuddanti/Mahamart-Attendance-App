@@ -59,3 +59,12 @@ Daily codes: P, H, A.
 
 ## Handoff rule
 When the user says “bye” at the end of a session, the latest business decisions and completed changes must be written into all project .md handoff documents and committed to GitHub.
+
+
+## Historical rule changes
+- The original concept allowed more flexible employee actions, but the user deliberately simplified the employee flow to Shift In/Shift Out.
+- Employee-controlled ordinary breaks were removed from the intended business workflow.
+- Admin-authorized breaks were introduced instead.
+- Actual punch location was introduced separately from employee designated location.
+- Remote punching was added as an employee-level authorization.
+- The employee selector was introduced only as a temporary Android testing mechanism and is not a final business rule.

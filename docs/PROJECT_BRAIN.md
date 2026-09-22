@@ -252,3 +252,10 @@ Next session:
 GitHub is the implementation source and these Markdown files are the handoff memory. Another ChatGPT account should read all eight before continuing.
 
 Whenever the user says "bye", update all eight handoff files with the latest conversation, decisions, implementation state, database changes, removals, bugs, tests, deployments and next steps, then commit them to GitHub.
+
+
+## Historical evolution
+The product started as a broad attendance concept and was progressively narrowed into an attendance-only operational system. The important evolution was:
+prototype admin UI -> attendance rules/reports -> Supabase backend -> Android kiosk -> GPS/geofence -> remote punch -> live testing -> real facial recognition as the next major step.
+
+The documentation should preserve both current state and why earlier choices were made.

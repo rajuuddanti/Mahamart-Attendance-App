@@ -53,8 +53,9 @@ export default function App(){
    setLocations((ls||[]) as Place[]);
  }
  const today=useMemo(()=>new Date().toISOString().slice(0,10),[]);
- const selectedDayPunches=selected? punches.filter(p=>p.employee_id===selected.id&&p.punched_at.slice(0,10)===today):[];
- const openShift=selectedDayPunches.some(p=>p.action==='Shift In')&&!selectedDayPunches.some(p=>p.action==='Shift Out');
+ const selectedDayPunches=selected? punches.filter(p=>p.employee_id===selected.id&&p.punched_at.slice(0,10)===today).sort((a,b)=>new Date(b.punched_at).getTime()-new Date(a.punched_at).getTime()):[];
+ const latestShiftPunch=selectedDayPunches.find(p=>p.action==='Shift In'||p.action==='Shift Out');
+ const openShift=latestShiftPunch?.action==='Shift In';
  const openBreak=selected?breaks.find(b=>b.employee_id===selected.id&&b.ended_at===null):null;
  const selectedPlace=selected?locations.find(l=>l.id===selected.location_id):undefined;
 

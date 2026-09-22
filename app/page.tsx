@@ -76,7 +76,7 @@ const initialEmployees: Employee[] = [
   { name: "Kiran Rao", id: "EMP006", location: "Head Office", shiftIn: "09:06 AM", shiftOut: "—", status: "Present", avatar: "KR" },
   { name: "Meena Devi", id: "EMP007", location: "Head Office", shiftIn: "09:20 AM", shiftOut: "—", status: "Present", avatar: "MD", late: true },
   { name: "Vikram Singh", id: "EMP008", location: "Head Office", shiftIn: "09:14 AM", shiftOut: "—", status: "Present", avatar: "VS" },
-  { name: "Anita Reddy", id: "EMP009", location: "Head Office", shiftIn: "—", status: "Absent", avatar: "AR" },
+  { name: "Anita Reddy", id: "EMP009", location: "Head Office", shiftIn: "—", shiftOut: "—", status: "Absent", avatar: "AR" },
   { name: "Ravi Teja", id: "EMP010", location: "Head Office", shiftIn: "09:28 AM", shiftOut: "—", status: "Present", avatar: "RT", late: true },
   { name: "Lakshmi Rao", id: "EMP011", location: "Head Office", shiftIn: "09:04 AM", shiftOut: "—", status: "Present", avatar: "LR" },
   { name: "Manoj Kumar", id: "EMP012", location: "Head Office", shiftIn: "—", status: "Not Checked In", avatar: "MK" },
@@ -311,22 +311,30 @@ export default function Dashboard() {
       }));
 
       setEmployees(mappedEmployees);
-      setAttendanceLoading(false);
     }
 
     loadEmployeesAndLocations();
 
+    return () => { active = false; };
+  }, [companyId]);
+
+  useEffect(() => {
+    if (!companyId) return;
+
     const channel = supabase.channel("main-dashboard-attendance")
       .on("postgres_changes", { event: "*", schema: "public", table: "attendance_punches" }, () => {
-        loadAttendance();
+        setAttendanceRefresh((value) => value + 1);
       })
       .subscribe();
 
     return () => {
-      active = false;
       supabase.removeChannel(channel);
     };
-  }, [companyId, dateFilter]);
+  }, [companyId]);
+
+  useEffect(() => {
+    if (companyId) loadAttendance();
+  }, [companyId, dateFilter, attendanceRefresh, employees.length]);
 
   async function loadAttendance() {
     if (!companyId) return;
@@ -453,7 +461,7 @@ export default function Dashboard() {
     }
 
     const employee: Employee = {
-      id, name, location, shiftIn: "—", status: "Not Checked In", avatar,
+      id, name, location, shiftIn: "—", shiftOut: "—", status: "Not Checked In", avatar,
       phone, email, designation, department, joiningDate,
       shiftStart, shiftEnd, role: "Employee",
     };
@@ -529,7 +537,7 @@ export default function Dashboard() {
         const location = get(["location", "store", "storelocation"]) || "Head Office";
         const avatar = name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
         return {
-          id, name, location, avatar, shiftIn: "—", status: "Not Checked In" as const,
+          id, name, location, avatar, shiftIn: "—", shiftOut: "—", status: "Not Checked In" as const,
           phone: get(["phone", "mobile", "mobilenumber"]),
           email: get(["email", "emailaddress"]),
           dob: get(["dob", "dateofbirth"]),

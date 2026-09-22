@@ -1,56 +1,119 @@
-# Mahamart Attendance — Project Brain
+# Mahamart Attendance — Master Project Brain
 
-## Goal
-Build a SalaryBox-style attendance system for Mahamart, focused on attendance only. No payroll/salary calculation.
+## 1. Why this project exists
+Mahamart needs a practical attendance-management system similar in concept to SalaryBox, but focused on attendance rather than payroll. The goal is to control employee attendance across an office/store network, with a web admin system and shared Android kiosks.
 
-## Architecture
+The project is being built so that:
+- the business owns the source code;
+- Supabase holds the live application data;
+- Vercel hosts the web admin;
+- Android kiosks handle real employee attendance;
+- GitHub documentation preserves the project context across ChatGPT accounts/chats.
+
+The user has previously built a CRM web application with ChatGPT on Render and is comfortable directing product requirements while ChatGPT handles much of the technical implementation.
+
+## 2. Product scope
+### Included
+- Employee management
+- Locations/stores
+- Attendance
+- Shift In / Shift Out
+- Admin-authorized breaks
+- Attendance rules
+- Daily/monthly reports
+- Users and roles
+- Permissions
+- Excel employee import/export groundwork
+- GPS/geofence validation
+- Remote punch authorization
+- Android shared kiosk
+- Planned employee facial recognition
+
+### Explicitly excluded for now
+- Payroll/salary calculation
+- Full HR/payroll suite
+- Unrelated CRM functionality
+- Production biometric hardening until the recognition design is validated
+- Advanced features until live testing and HR review are complete
+
+## 3. Target organization
+Initial test environment:
+- One office
+- Approximately 12 employees
+- Approximately 4–6 admin/backend users
+
+Future target:
+- Multiple stores/locations
+- Approximately 400 employees
+- Store managers and supervisors with location-scoped access
+
+## 4. Architecture
 - Web Admin: Next.js + TypeScript
 - Web hosting: Vercel
 - Source: GitHub
-- Backend: Supabase PostgreSQL, Auth, RLS, Realtime
-- Android: Expo React Native shared kiosk
-- Android code: /mobile
-- Supabase SQL: /supabase
+- Database/Auth/Realtime: Supabase PostgreSQL
+- Android kiosk: Expo React Native under /mobile
+- Domain: GoDaddy can be used for the domain; GoDaddy hosting is not required
 
-Data flow: Android Kiosk / approved remote punch -> Supabase -> attendance -> Realtime -> Web Admin.
+Data flow:
+Android Kiosk / approved remote punch -> Supabase -> attendance -> Realtime -> Web Admin.
 
-## Attendance workflow
-Normal employee flow is intentionally simple:
+## 5. Attendance model
+Normal employee flow is deliberately simple:
 1. Shift In
 2. Shift Out
 
-Once Shift In is done, only Shift Out is offered. Once Shift Out is done, Shift In becomes available again. Duplicate Shift In and invalid Shift Out are blocked in both UI and database.
+After Shift In, only Shift Out is available.
+After Shift Out, Shift In becomes available again.
+Duplicate Shift In and invalid Shift Out are blocked in UI and database.
 
-## Break workflow
-Employees do not get normal Break Out/Break In buttons.
-Admin opens Attendance -> employee -> detail popup -> Create Break -> remarks -> Start Break.
-The authorized break is stored in the backend. Mobile can show Break In while that break is open.
+## 6. Break model
+Employees do not get ordinary Break Out/Break In controls.
 
-## Employee shifts
-Every employee gets a default shift during creation. Current examples:
-- 09:00-18:00
-- 09:00-18:30
+Admin workflow:
+Attendance -> employee -> attendance detail -> Create Break -> Start Break + remarks.
 
-## Locations
-Employees have a designated/assigned location. Locations should be clickable and show relevant data.
-Location data includes name, address, latitude, longitude and geofence radius.
+Backend stores the authorized break.
+Mobile can show Break In while that authorized break is open.
 
-## Punch location
-Designated location and actual punch location are separate.
+## 7. Shifts
+Every employee gets a default shift during creation.
+Examples used during development:
+- 09:00–18:00
+- 09:00–18:30
 
-Kiosk employees:
-- Kiosk is locked to its assigned store.
-- GPS/geofence verification is used.
-- Punch outside the allowed radius is rejected.
+## 8. Attendance rules
+Default seeded rule:
+- Shift 09:00–18:00
+- Grace 15 minutes
+- Under 5 worked hours = Absent
+- Under 8 worked hours = Half Day
+- 8+ worked hours = Present
+- Require Shift Out
+- Allow early Shift In
+- No week-off logic currently
 
-Remote-punch employees:
-- Explicitly authorized per employee.
-- GPS captured at punch time.
-- If inside a registered store geofence, record that store as actual punch location.
-- Otherwise record Remote plus GPS/accuracy.
-- Do not overwrite the employee's designated location.
+Monthly reporting cycle:
+21st through 20th.
+Daily codes: P, H, A.
+Total Present Days = Present + Half Day.
 
-## Roles
+## 9. Locations and punch location
+Employee designated location and actual punch location are separate.
+
+Kiosk:
+- Kiosk is intended to be tied to its assigned store.
+- GPS/geofence validation is required.
+- Punch outside allowed radius is rejected.
+
+Remote punch:
+- Explicitly enabled per employee.
+- GPS and accuracy are captured.
+- If physically inside a registered store geofence, actual punch location is that store.
+- Otherwise actual punch location is Remote plus GPS.
+- Employee designated location is never overwritten.
+
+## 10. Roles
 - Super Admin
 - Company Admin
 - HR
@@ -58,109 +121,134 @@ Remote-punch employees:
 - Supervisor
 - Employee
 
-Permissions cover employees, attendance, reports/export, locations, users and rules. Store-scoped users should only access assigned locations.
+Permissions cover:
+- employee view/create/edit/delete
+- attendance view/edit
+- reports/export
+- locations
+- users
+- settings/rules
 
-## Reports
-Daily:
-Employee ID | Name | Designation | Designated Location | Role | First In | Last Out
+Store-scoped users should only access assigned locations.
 
-Monthly cycle is 21st through 20th:
-Employee ID | Name | Role | Total Present Days | Present | Half | Absent | daily columns
-Daily codes: P, H, A.
-Total Present Days = Present + Half Day.
-No week-offs currently.
+## 11. Web application
+Main sections:
+- Dashboard
+- Employees
+- Locations
+- Attendance
+- Reports
+- Users & Roles
+- Rules
+- Settings
 
-## Attendance rules
-Default:
-- Shift 09:00-18:00
-- Grace 15 minutes
-- Under 5 worked hours = Absent
-- Under 8 worked hours = Half Day
-- 8+ = Present
-- Require Shift Out
-- Allow early Shift In
-No week-off logic.
+Employee creation now writes to Supabase.
+Employee rows, locations and users have detail/edit interactions.
 
-## Face recognition
-This is now the next active feature after the live-test baseline.
-The Android kiosk must eventually:
-1. Open the front camera.
-2. Detect a face.
-3. Perform liveness/anti-spoofing.
-4. Generate a face embedding from the live face.
-5. Match it against enrolled employee face templates.
-6. Identify the employee automatically; no employee selector in the final kiosk flow.
-7. Apply the existing Shift In/Shift Out rules.
-8. Apply GPS/geofence and actual punch-location rules.
-9. Write the verified attendance punch to Supabase.
+The root web page remains partly a prototype/local-data UI, while /live is the Supabase-connected attendance test route.
 
-Prefer on-device processing where practical. Face templates/embeddings are sensitive biometric data and require secure storage, access control, and production hardening. Expo device LocalAuthentication is not the employee-recognition solution; it authenticates the device owner's biometric and cannot identify one of our employees.
+## 12. Android kiosk
+The Android application is a shared kiosk:
+- manager signs in;
+- employees use the kiosk;
+- the final product must identify employees by face;
+- employees should not select their names in the final kiosk.
 
-Current Android app is still a manual employee-selector prototype. The next implementation step is to choose and integrate a compatible camera + face detection/embedding + liveness stack, likely requiring an Expo development build/native modules. Do not fake face recognition with a camera preview or device biometric prompt.
+The current app is still a live-test prototype with a temporary employee selector.
 
-## Database
-Core tables:
+## 13. Face recognition — next major feature
+Final flow:
+camera -> face detection -> liveness/anti-spoofing -> face embedding -> employee match -> Shift In/Out state check -> GPS/geofence -> Supabase punch -> Realtime -> Web Admin.
+
+Requirements:
+- front camera
+- automatic employee identification
+- liveness/anti-spoofing
+- secure employee enrollment
+- face embeddings/templates
+- no employee selector in final kiosk
+- reuse existing attendance and location rules
+
+Device LocalAuthentication is not suitable because it authenticates the device owner's enrolled biometric; it does not identify an employee against the company's employee database.
+
+Prefer on-device processing where practical. Biometric data needs extra security/privacy review.
+
+## 14. Database
+Core:
 companies, locations, employees, roles, permissions, role_permissions, profiles, attendance_rules, attendance_punches.
 
 Added:
 shifts, attendance_breaks.
 
-Employee additions:
-shift_id, remote_punch_allowed.
+Employee:
+- shift_id
+- remote_punch_allowed
+- existing face_template / face_capture_path groundwork
 
-Location additions:
-latitude, longitude, geofence_radius_m.
+Location:
+- latitude
+- longitude
+- geofence_radius_m
 
-Punch additions:
-latitude, longitude, accuracy_m, geo_verified, punch_location_name, punch_mode.
+Punch:
+- latitude
+- longitude
+- accuracy_m
+- geo_verified
+- punch_location_name
+- punch_mode
 
-A PostgreSQL trigger prevents duplicate Shift In while an open shift exists and prevents Shift Out without an open Shift In.
+PostgreSQL integrity logic prevents duplicate Shift In while open and Shift Out without an open Shift In.
 
-## Security
-Use Supabase publishable keys in browser/mobile. Never expose service-role/secret keys. RLS is enabled. Full granular role-permission DB enforcement is still a production-hardening task. Biometric data requires additional protection.
+## 15. Security
+- Use Supabase publishable keys in browser/mobile.
+- Never expose service-role/secret keys.
+- RLS is enabled.
+- Granular role-permission enforcement at every DB policy still needs production hardening.
+- Biometric data must not be casually exposed in admin UI.
+- Production face recognition needs enrollment, liveness, storage and access-control review.
 
-## Current UI
-Sections:
-Dashboard, Employees, Locations, Attendance, Reports, Users & Roles, Rules, Settings.
+## 16. Excel
+Employee import groundwork supports fields including:
+employee ID, name, location, phone, email, DOB, gender, address, emergency contact/phone, joining date, designation, department, PAN, Aadhaar, bank account and IFSC.
 
-Employee rows, location cards and users are clickable. Employee creation includes shift assignment. Attendance shows only the appropriate Shift In/Shift Out action. Admin break creation is available in employee detail.
-
-## Excel
-Employee import supports employee ID, name, location, phone, email, DOB, gender, address, emergency contact/phone, joining date, designation, department, PAN, Aadhaar, bank account and IFSC.
-
-## Current live-test baseline
+## 17. Current live-test state
+Working/implemented baseline:
 - Supabase authentication
 - Employees
+- Employee creation connected to Supabase
 - Shift In/Out
-- Duplicate-punch protection
-- Admin-authorized breaks
+- duplicate punch protection
+- admin-authorized breaks
 - Break In
-- Realtime attendance groundwork
-- Location/geofence groundwork
-- Remote-punch groundwork
-- Android kiosk app connected to Supabase
-- Android GPS punch fields connected to the database
+- realtime attendance groundwork
+- location/geofence groundwork
+- remote punch groundwork
+- Android kiosk connected to Supabase
+- Android GPS/location punch fields
 
-The temporary Android employee selector is only for testing. Final kiosk punching must use face recognition.
+Known:
+- The web test page can manually create test punches; this is testing only, not the intended employee punch mechanism.
+- The Android selector is temporary.
+- Three test punches were recorded during live testing: Shift In, Shift Out, Shift In, all Web Admin with face_verified false.
 
-## Known current Android issue
-mobile/App.tsx previously had an accidental setPunchPlace(geo.name) reference inside signIn() even though geo is not defined there. Verify/fix this before relying on kiosk sign-in.
+## 18. Known bug
+mobile/App.tsx has an accidental setPunchPlace(geo.name) reference inside signIn(), where geo is not defined. Verify/fix before the next kiosk test.
 
-## Deliberately deferred
-Payroll, production biometric hardening, advanced HR workflows, final DB-level granular permissions, production kiosk lockdown, final geofence configuration for every store, advanced reporting/export and other HR-requested features.
+## 19. Current stop point
+The user stopped after seeing the Android kiosk running and correctly asked where the facial scanner was. The project is paused immediately before implementing real facial recognition.
 
-## Current stop point
-The project is paused between the initial live test and the next face-recognition implementation. The last user-visible state was the Android kiosk running with a manual employee selector. User wants to continue with real facial recognition next.
+Next session:
+1. Fix/verify Android sign-in bug.
+2. Confirm current Expo/React Native versions.
+3. Select compatible camera + face detection + embedding + liveness stack.
+4. Create required Expo development/native build.
+5. Replace employee selector with real recognition.
+6. Enroll a test employee.
+7. Test recognition + Shift In/Out + GPS/geofence + Supabase.
+8. Review biometric security.
 
-## Cross-account handoff rule
-When the user says “bye” at the end of a work session, before ending the session update:
-- docs/PROJECT_BRAIN.md
-- docs/DATABASE.md
-- docs/BUSINESS_RULES.md
-- docs/ARCHITECTURE.md
-- docs/DEVELOPMENT_LOG.md
+## 20. Cross-account rule
+GitHub is the implementation source and these Markdown files are the handoff memory. Another ChatGPT account should read all eight before continuing.
 
-The updates should capture the latest completed work, database changes, decisions, bugs, current stop point, and exact next step. Commit the documentation to GitHub so another ChatGPT account can resume from the repository without relying on chat history.
-
-## Project rule
-GitHub contains the implementation. These documents preserve the important product decisions, business rules, architecture, database state, development history and current handoff so the project can be resumed in another ChatGPT conversation/account.
+Whenever the user says "bye", update all eight handoff files with the latest conversation, decisions, implementation state, database changes, removals, bugs, tests, deployments and next steps, then commit them to GitHub.

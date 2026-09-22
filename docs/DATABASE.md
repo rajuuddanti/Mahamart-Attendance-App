@@ -49,3 +49,14 @@ Face recognition will use the existing employee face-template storage (face_temp
 
 ## Handoff rule
 At the end of a session, when the user says “bye”, update this file with any database changes made during that session and commit the documentation to GitHub.
+
+
+## Database history
+The initial schema was expanded from basic attendance into shifts, breaks, geofencing, remote punching and biometric groundwork.
+
+The live environment needed manual schema application because the running Supabase schema initially lagged the GitHub SQL. The user applied the missing employee remote-punch column and attendance GPS/location columns directly.
+
+The biometric columns that exist are groundwork only. Do not assume they are ready for production face recognition.
+
+## Important safety/context note
+The user once pasted attendance SQL into the CRM Supabase project by mistake. It created unrelated bills and call_logs tables, which were removed. Future SQL must always be run against the Mahamart Attendance Supabase project.

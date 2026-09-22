@@ -34,6 +34,16 @@
 4. Outside registered stores -> record Remote plus GPS.
 5. Do not overwrite designated location.
 
+## Face Recognition Kiosk
+1. Final kiosk must not require employees to select their name.
+2. Kiosk uses the front camera to identify the employee.
+3. Recognition must include liveness/anti-spoofing before accepting a punch.
+4. The recognized employee is then checked against normal Shift In/Shift Out state rules.
+5. GPS/geofence validation still applies.
+6. Actual punch location remains separate from designated employee location.
+7. Face templates/embeddings are sensitive biometric data and must not be exposed casually.
+8. Device biometric authentication is not a substitute for employee face recognition.
+
 ## Attendance
 Default:
 - Grace 15 minutes
@@ -46,3 +56,6 @@ Default:
 Monthly cycle is 21st through 20th.
 Total Present Days = Present + Half Day.
 Daily codes: P, H, A.
+
+## Handoff rule
+When the user says “bye” at the end of a session, the latest business decisions and completed changes must be written into all project .md handoff documents and committed to GitHub.

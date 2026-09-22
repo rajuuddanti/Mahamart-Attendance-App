@@ -54,3 +54,30 @@ The Android kiosk does NOT yet have real facial recognition. The employee select
 
 ## Handoff rule
 Whenever the user says "bye", update this file with all implementation changes from the session and commit it with the other handoff documents.
+
+
+## Historical implementation timeline
+1. Built initial interactive admin prototype.
+2. Added attendance rules and role management.
+3. Added Excel employee import.
+4. Added date filters, attendance counts, employee records and punch history.
+5. Added Supabase live attendance schema.
+6. Added Supabase web client and /live test page.
+7. Added Expo Android kiosk and Supabase connection.
+8. Added live-test documentation.
+9. Added shift/geofence/break/punch-integrity schema.
+10. Simplified kiosk to single state-aware Shift In/Out.
+11. Added Expo location support.
+12. Added admin break workflow and kiosk geofence groundwork.
+13. Added remote punch authorization and actual punch location.
+14. Connected employee creation to Supabase.
+15. Created project brain and five initial handoff documents.
+16. Expanded handoff to eight documents.
+17. Current next implementation: real face recognition.
+
+## Testing/removal history
+- Web manual punches were used for connectivity testing.
+- The selector-based Android punch flow is temporary.
+- Flexible employee break controls were removed from the intended flow.
+- Accidental CRM tables bills/call_logs were removed after attendance SQL was pasted into the wrong Supabase project.
+- No production biometric stack has been installed yet.

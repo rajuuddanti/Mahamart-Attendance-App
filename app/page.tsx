@@ -195,6 +195,7 @@ export default function Dashboard() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [attendanceLoading, setAttendanceLoading] = useState(true);
   const [attendanceError, setAttendanceError] = useState("");
+  const [attendanceRefresh, setAttendanceRefresh] = useState(0);
   const [rules, setRules] = useState<Rules>(defaultRules);
   const [search, setSearch] = useState("");
   const [storeFilter, setStoreFilter] = useState("All Locations");

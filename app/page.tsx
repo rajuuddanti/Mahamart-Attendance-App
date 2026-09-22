@@ -67,31 +67,6 @@ const navItems = [
   { label: "Settings", icon: "⚙" },
 ];
 
-const initialEmployees: Employee[] = [
-  { name: "Rahul Kumar", id: "EMP001", location: "Head Office", shiftIn: "09:02 AM", shiftOut: "—", status: "Present", avatar: "RK", late: false, phone: "9876543210", email: "rahul@mahamart.com", designation: "Sales Executive", department: "Sales", shiftStart: "09:00", shiftEnd: "18:00", role: "Employee" },
-  { name: "Suresh Babu", id: "EMP002", location: "Head Office", shiftIn: "09:11 AM", shiftOut: "—", status: "Present", avatar: "SB", late: false, phone: "9876543211", email: "suresh@mahamart.com", designation: "Store Executive", department: "Store", shiftStart: "09:00", shiftEnd: "18:30", role: "Employee" },
-  { name: "Priya Sharma", id: "EMP003", location: "Head Office", shiftIn: "08:58 AM", shiftOut: "—", status: "Present", avatar: "PS", late: false, phone: "9876543212", email: "priya@mahamart.com", designation: "HR Executive", department: "HR", shiftStart: "09:00", shiftEnd: "18:00", role: "Employee" },
-  { name: "Arun Kumar", id: "EMP004", location: "Head Office", shiftIn: "—", shiftOut: "—", status: "Not Checked In", avatar: "AK" },
-  { name: "Divya Reddy", id: "EMP005", location: "Head Office", shiftIn: "09:17 AM", shiftOut: "—", status: "Present", avatar: "DR", late: true },
-  { name: "Kiran Rao", id: "EMP006", location: "Head Office", shiftIn: "09:06 AM", shiftOut: "—", status: "Present", avatar: "KR" },
-  { name: "Meena Devi", id: "EMP007", location: "Head Office", shiftIn: "09:20 AM", shiftOut: "—", status: "Present", avatar: "MD", late: true },
-  { name: "Vikram Singh", id: "EMP008", location: "Head Office", shiftIn: "09:14 AM", shiftOut: "—", status: "Present", avatar: "VS" },
-  { name: "Anita Reddy", id: "EMP009", location: "Head Office", shiftIn: "—", shiftOut: "—", status: "Absent", avatar: "AR" },
-  { name: "Ravi Teja", id: "EMP010", location: "Head Office", shiftIn: "09:28 AM", shiftOut: "—", status: "Present", avatar: "RT", late: true },
-  { name: "Lakshmi Rao", id: "EMP011", location: "Head Office", shiftIn: "09:04 AM", shiftOut: "—", status: "Present", avatar: "LR" },
-  { name: "Manoj Kumar", id: "EMP012", location: "Head Office", shiftIn: "—", status: "Not Checked In", avatar: "MK" },
-];
-
-const initialPunches: Punch[] = [
-  { id: "p1", employeeId: "EMP002", employee: "Suresh Babu", action: "Break Out", time: "12:42 PM", date: "2026-09-21", faceVerified: true, faceConfidence: 98.4, source: "Kiosk" },
-  { id: "p2", employeeId: "EMP005", employee: "Divya Reddy", action: "Shift In", time: "09:17 AM", date: "2026-09-21", faceVerified: true, faceConfidence: 99.1, source: "Kiosk" },
-  { id: "p3", employeeId: "EMP001", employee: "Rahul Kumar", action: "Shift In", time: "09:02 AM", date: "2026-09-21", faceVerified: true, faceConfidence: 99.3, source: "Kiosk" },
-  { id: "p4", employeeId: "EMP003", employee: "Priya Sharma", action: "Shift In", time: "08:58 AM", date: "2026-09-21", faceVerified: true, faceConfidence: 98.9, source: "Kiosk" },
-  { id: "p5", employeeId: "EMP001", employee: "Rahul Kumar", action: "Break Out", time: "12:16 PM", date: "2026-09-21", faceVerified: true, faceConfidence: 97.8, source: "Kiosk" },
-  { id: "p6", employeeId: "EMP001", employee: "Rahul Kumar", action: "Break In", time: "12:24 PM", date: "2026-09-21", faceVerified: true, faceConfidence: 98.2, source: "Kiosk" },
-  { id: "p7", employeeId: "EMP001", employee: "Rahul Kumar", action: "Shift Out", time: "06:02 PM", date: "2026-09-20", faceVerified: true, faceConfidence: 99.0, source: "Kiosk" },
-];
-
 const defaultRules: Rules = {
   shiftStart: "09:00",
   shiftEnd: "18:00",

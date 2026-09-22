@@ -8,6 +8,7 @@ type Employee = {
   name: string;
   location: string;
   shiftIn: string;
+  shiftOut: string;
   status: "Present" | "On Break" | "Not Checked In" | "Absent" | "Half Day";
   avatar: string;
   late?: boolean;
@@ -67,17 +68,17 @@ const navItems = [
 ];
 
 const initialEmployees: Employee[] = [
-  { name: "Rahul Kumar", id: "EMP001", location: "Head Office", shiftIn: "09:02 AM", status: "Present", avatar: "RK", late: false, phone: "9876543210", email: "rahul@mahamart.com", designation: "Sales Executive", department: "Sales", shiftStart: "09:00", shiftEnd: "18:00", role: "Employee" },
-  { name: "Suresh Babu", id: "EMP002", location: "Head Office", shiftIn: "09:11 AM", status: "Present", avatar: "SB", late: false, phone: "9876543211", email: "suresh@mahamart.com", designation: "Store Executive", department: "Store", shiftStart: "09:00", shiftEnd: "18:30", role: "Employee" },
-  { name: "Priya Sharma", id: "EMP003", location: "Head Office", shiftIn: "08:58 AM", status: "Present", avatar: "PS", late: false, phone: "9876543212", email: "priya@mahamart.com", designation: "HR Executive", department: "HR", shiftStart: "09:00", shiftEnd: "18:00", role: "Employee" },
-  { name: "Arun Kumar", id: "EMP004", location: "Head Office", shiftIn: "—", status: "Not Checked In", avatar: "AK" },
-  { name: "Divya Reddy", id: "EMP005", location: "Head Office", shiftIn: "09:17 AM", status: "Present", avatar: "DR", late: true },
-  { name: "Kiran Rao", id: "EMP006", location: "Head Office", shiftIn: "09:06 AM", status: "Present", avatar: "KR" },
-  { name: "Meena Devi", id: "EMP007", location: "Head Office", shiftIn: "09:20 AM", status: "Present", avatar: "MD", late: true },
-  { name: "Vikram Singh", id: "EMP008", location: "Head Office", shiftIn: "09:14 AM", status: "Present", avatar: "VS" },
+  { name: "Rahul Kumar", id: "EMP001", location: "Head Office", shiftIn: "09:02 AM", shiftOut: "—", status: "Present", avatar: "RK", late: false, phone: "9876543210", email: "rahul@mahamart.com", designation: "Sales Executive", department: "Sales", shiftStart: "09:00", shiftEnd: "18:00", role: "Employee" },
+  { name: "Suresh Babu", id: "EMP002", location: "Head Office", shiftIn: "09:11 AM", shiftOut: "—", status: "Present", avatar: "SB", late: false, phone: "9876543211", email: "suresh@mahamart.com", designation: "Store Executive", department: "Store", shiftStart: "09:00", shiftEnd: "18:30", role: "Employee" },
+  { name: "Priya Sharma", id: "EMP003", location: "Head Office", shiftIn: "08:58 AM", shiftOut: "—", status: "Present", avatar: "PS", late: false, phone: "9876543212", email: "priya@mahamart.com", designation: "HR Executive", department: "HR", shiftStart: "09:00", shiftEnd: "18:00", role: "Employee" },
+  { name: "Arun Kumar", id: "EMP004", location: "Head Office", shiftIn: "—", shiftOut: "—", status: "Not Checked In", avatar: "AK" },
+  { name: "Divya Reddy", id: "EMP005", location: "Head Office", shiftIn: "09:17 AM", shiftOut: "—", status: "Present", avatar: "DR", late: true },
+  { name: "Kiran Rao", id: "EMP006", location: "Head Office", shiftIn: "09:06 AM", shiftOut: "—", status: "Present", avatar: "KR" },
+  { name: "Meena Devi", id: "EMP007", location: "Head Office", shiftIn: "09:20 AM", shiftOut: "—", status: "Present", avatar: "MD", late: true },
+  { name: "Vikram Singh", id: "EMP008", location: "Head Office", shiftIn: "09:14 AM", shiftOut: "—", status: "Present", avatar: "VS" },
   { name: "Anita Reddy", id: "EMP009", location: "Head Office", shiftIn: "—", status: "Absent", avatar: "AR" },
-  { name: "Ravi Teja", id: "EMP010", location: "Head Office", shiftIn: "09:28 AM", status: "Present", avatar: "RT", late: true },
-  { name: "Lakshmi Rao", id: "EMP011", location: "Head Office", shiftIn: "09:04 AM", status: "Present", avatar: "LR" },
+  { name: "Ravi Teja", id: "EMP010", location: "Head Office", shiftIn: "09:28 AM", shiftOut: "—", status: "Present", avatar: "RT", late: true },
+  { name: "Lakshmi Rao", id: "EMP011", location: "Head Office", shiftIn: "09:04 AM", shiftOut: "—", status: "Present", avatar: "LR" },
   { name: "Manoj Kumar", id: "EMP012", location: "Head Office", shiftIn: "—", status: "Not Checked In", avatar: "MK" },
 ];
 
@@ -105,7 +106,24 @@ const defaultRules: Rules = {
 };
 
 function localDate() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")].join("-");
+}
+
+function dateKeyFromTimestamp(value: string) {
+  const d = new Date(value);
+  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")].join("-");
+}
+
+function dateRange(date: string) {
+  const start = new Date(date + "T00:00:00");
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+function formatPunchTime(value: string) {
+  return new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }).format(new Date(value));
 }
 
 function dateLabel(date: string) {
@@ -133,28 +151,41 @@ function scheduleTimeToMinutes(value: string) {
 }
 
 function statusForDate(employee: Employee, date: string, punches: Punch[], rules: Rules) {
-  const events = punches.filter((p) => p.employeeId === employee.id && p.date === date).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+  const events = punches.filter((p) => p.employeeId === employee.id && p.date === date)
+    .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   const shiftIn = events.find((p) => p.action === "Shift In");
-  const last = events[events.length - 1];
-  if (!shiftIn) return { status: "Not Checked In" as Employee["status"], late: false, shiftIn: "—" };
-  const late = timeToMinutes(shiftIn.time) > scheduleTimeToMinutes(rules.shiftStart) + Number(rules.grace);
-  if (last && last.action === "Break Out") return { status: "On Break" as Employee["status"], late, shiftIn: shiftIn.time };
-  if (last && last.action === "Shift Out" && rules.workingHoursEnabled) {
-    const worked = calculateWorkedMinutes(employee.id, date, punches);
-    if (worked < Number(rules.absentHours) * 60) return { status: "Absent" as Employee["status"], late, shiftIn: shiftIn.time };
-    if (worked < Number(rules.halfDayHours) * 60) return { status: "Half Day" as Employee["status"], late, shiftIn: shiftIn.time };
+  const shiftOut = [...events].reverse().find((p) => p.action === "Shift Out");
+  const lastShift = [...events].reverse().find((p) => p.action === "Shift In" || p.action === "Shift Out");
+  const lastBreak = [...events].reverse().find((p) => p.action === "Break Out" || p.action === "Break In");
+
+  if (!shiftIn || lastShift?.action !== "Shift In") {
+    return { status: "Not Checked In" as Employee["status"], late: false, shiftIn: shiftIn?.time || "—", shiftOut: shiftOut?.time || "—" };
   }
-  return { status: "Present" as Employee["status"], late, shiftIn: shiftIn.time };
+
+  const late = timeToMinutes(shiftIn.time) > scheduleTimeToMinutes(rules.shiftStart) + Number(rules.grace);
+  if (lastBreak?.action === "Break Out" && (!lastShift || timeToMinutes(lastBreak.time) > timeToMinutes(lastShift.time))) {
+    return { status: "On Break" as Employee["status"], late, shiftIn: shiftIn.time, shiftOut: shiftOut?.time || "—" };
+  }
+
+  if (shiftOut && rules.workingHoursEnabled) {
+    const worked = calculateWorkedMinutes(employee.id, date, punches);
+    if (worked < Number(rules.absentHours) * 60) return { status: "Absent" as Employee["status"], late, shiftIn: shiftIn.time, shiftOut: shiftOut.time };
+    if (worked < Number(rules.halfDayHours) * 60) return { status: "Half Day" as Employee["status"], late, shiftIn: shiftIn.time, shiftOut: shiftOut.time };
+  }
+
+  return { status: "Present" as Employee["status"], late, shiftIn: shiftIn.time, shiftOut: shiftOut?.time || "—" };
 }
 
 function calculateWorkedMinutes(employeeId: string, date: string, punches: Punch[]) {
-  const events = punches.filter((p) => p.employeeId === employeeId && p.date === date).sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+  const events = punches.filter((p) => p.employeeId === employeeId && p.date === date)
+    .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
   let total = 0;
   let inAt: number | null = null;
   let breakAt: number | null = null;
-  events.forEach((event) => {
+
+  for (const event of events) {
     const t = timeToMinutes(event.time);
-    if (event.action === "Shift In") inAt = t;
+    if (event.action === "Shift In" && inAt === null) inAt = t;
     if (event.action === "Break Out" && inAt !== null) {
       total += t - inAt;
       inAt = null;
@@ -167,8 +198,10 @@ function calculateWorkedMinutes(employeeId: string, date: string, punches: Punch
     if (event.action === "Shift Out" && inAt !== null) {
       total += t - inAt;
       inAt = null;
+      breakAt = null;
     }
-  });
+  }
+
   return total;
 }
 
@@ -178,8 +211,11 @@ function formatHours(minutes: number) {
 
 export default function Dashboard() {
   const [active, setActive] = useState("Dashboard");
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
-  const [punches, setPunches] = useState<Punch[]>(initialPunches);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [punches, setPunches] = useState<Punch[]>([]);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [attendanceLoading, setAttendanceLoading] = useState(true);
+  const [attendanceError, setAttendanceError] = useState("");
   const [rules, setRules] = useState<Rules>(defaultRules);
   const [search, setSearch] = useState("");
   const [storeFilter, setStoreFilter] = useState("All Locations");
@@ -192,17 +228,144 @@ export default function Dashboard() {
   const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const savedEmployees = localStorage.getItem("mahamart-employees");
-    const savedPunches = localStorage.getItem("mahamart-punches");
     const savedRules = localStorage.getItem("mahamart-rules");
-    if (savedEmployees) setEmployees(JSON.parse(savedEmployees));
-    if (savedPunches) setPunches(JSON.parse(savedPunches));
     if (savedRules) setRules({ ...defaultRules, ...JSON.parse(savedRules) });
+
+    let active = true;
+    async function loadCompany() {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        if (active) {
+          setAttendanceLoading(false);
+          setAttendanceError("Sign in through the Live Attendance page first so the dashboard can read Supabase attendance.");
+        }
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("id", sessionData.session.user.id)
+        .single();
+
+      if (profileError || !profile?.company_id) {
+        if (active) {
+          setAttendanceLoading(false);
+          setAttendanceError(profileError?.message || "Your Supabase profile/company was not found.");
+        }
+        return;
+      }
+
+      if (active) setCompanyId(profile.company_id);
+    }
+
+    loadCompany();
+    return () => { active = false; };
   }, []);
 
-  useEffect(() => { localStorage.setItem("mahamart-employees", JSON.stringify(employees)); }, [employees]);
-  useEffect(() => { localStorage.setItem("mahamart-punches", JSON.stringify(punches)); }, [punches]);
-  useEffect(() => { localStorage.setItem("mahamart-rules", JSON.stringify(rules)); }, [rules]);
+  useEffect(() => {
+    if (!companyId) return;
+
+    let active = true;
+
+    async function loadEmployeesAndLocations() {
+      setAttendanceLoading(true);
+      setAttendanceError("");
+
+      const [{ data: employeeRows, error: employeeError }, { data: locationRows, error: locationError }] = await Promise.all([
+        supabase.from("employees")
+          .select("id,employee_code,full_name,location_id,phone,email,designation,department,joining_date,active,shift_id")
+          .eq("company_id", companyId)
+          .eq("active", true)
+          .order("full_name"),
+        supabase.from("locations")
+          .select("id,name")
+          .eq("company_id", companyId)
+          .order("name"),
+      ]);
+
+      if (!active) return;
+      if (employeeError || locationError) {
+        setAttendanceError(employeeError?.message || locationError?.message || "Could not load employees or locations from Supabase.");
+        setAttendanceLoading(false);
+        return;
+      }
+
+      const locationMap = new Map((locationRows || []).map((row: any) => [row.id, row.name]));
+      const mappedEmployees: Employee[] = (employeeRows || []).map((row: any) => ({
+        id: row.id,
+        name: row.full_name,
+        location: locationMap.get(row.location_id) || "No location",
+        shiftIn: "—",
+        shiftOut: "—",
+        status: "Not Checked In",
+        avatar: row.full_name.split(" ").map((part: string) => part[0]).join("").slice(0, 2).toUpperCase(),
+        phone: row.phone || "",
+        email: row.email || "",
+        designation: row.designation || "",
+        department: row.department || "",
+        joiningDate: row.joining_date || "",
+        shiftStart: defaultRules.shiftStart,
+        shiftEnd: defaultRules.shiftEnd,
+        role: "Employee",
+      }));
+
+      setEmployees(mappedEmployees);
+      setAttendanceLoading(false);
+    }
+
+    loadEmployeesAndLocations();
+
+    const channel = supabase.channel("main-dashboard-attendance")
+      .on("postgres_changes", { event: "*", schema: "public", table: "attendance_punches" }, () => {
+        loadAttendance();
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [companyId, dateFilter]);
+
+  async function loadAttendance() {
+    if (!companyId) return;
+    const { start, end } = dateRange(dateFilter);
+    setAttendanceLoading(true);
+
+    const { data, error } = await supabase
+      .from("attendance_punches")
+      .select("id,employee_id,action,punched_at,source,face_verified,face_confidence")
+      .eq("company_id", companyId)
+      .gte("punched_at", start)
+      .lt("punched_at", end)
+      .order("punched_at", { ascending: false })
+      .limit(500);
+
+    if (error) {
+      setAttendanceError(error.message);
+      setPunches([]);
+      setAttendanceLoading(false);
+      return;
+    }
+
+    const nameById = new Map(employees.map((employee) => [employee.id, employee.name]));
+    const mappedPunches: Punch[] = (data || []).map((row: any) => ({
+      id: row.id,
+      employeeId: row.employee_id,
+      employee: nameById.get(row.employee_id) || "Employee",
+      action: row.action,
+      time: formatPunchTime(row.punched_at),
+      date: dateKeyFromTimestamp(row.punched_at),
+      faceVerified: !!row.face_verified,
+      faceConfidence: Number(row.face_confidence || 0),
+      source: row.source === "Web Admin" ? "Web Admin" : "Kiosk",
+    }));
+
+    setPunches(mappedPunches);
+    setAttendanceLoading(false);
+    setAttendanceError("");
+  }
 
   const locations = Array.from(new Set(employees.map((e) => e.location))).filter(Boolean);
 
@@ -411,7 +574,7 @@ export default function Dashboard() {
         </header>
 
         <div className="page">
-          {active === "Dashboard" && <DashboardPage stats={stats} employees={employees} punches={datePunches} rules={rules} date={dateFilter} onDate={setDateFilter} onAdd={() => setShowAdd(true)} onGo={goTo} />}
+          {active === "Dashboard" && <DashboardPage stats={stats} employees={employees} punches={datePunches} rules={rules} date={dateFilter} onDate={setDateFilter} onAdd={() => setShowAdd(true)} onGo={goTo} loading={attendanceLoading} error={attendanceError} />}
           {active === "Employees" && <EmployeesPage employees={filteredEmployees} allEmployees={employees} search={search} storeFilter={storeFilter} locations={locations} onSearch={setSearch} onStore={setStoreFilter} onAdd={() => setShowAdd(true)} onImport={() => setShowImport(true)} onSelect={setSelectedEmployee} />}
           {active === "Locations" && <LocationsPage locations={locations} employees={employees} onAdd={() => alert("Location creation will be connected to Supabase next.")} onSelect={setSelectedLocation} onRename={(oldName, newName) => setEmployees((current) => current.map((e) => e.location === oldName ? { ...e, location: newName } : e))} />}
           {active === "Attendance" && <AttendancePage employees={filteredEmployees} punches={punches} date={dateFilter} onDate={setDateFilter} storeFilter={storeFilter} locations={locations} onStore={setStoreFilter} onPunch={punchEmployee} onSelect={setSelectedEmployee} />}
@@ -431,13 +594,15 @@ export default function Dashboard() {
   );
 }
 
-function DashboardPage({ stats, employees, punches, rules, date, onDate, onAdd, onGo }: { stats: { present: number; absent: number; break: number; notIn: number; late: number }; employees: Employee[]; punches: Punch[]; rules: Rules; date: string; onDate: (date: string) => void; onAdd: () => void; onGo: (label: string) => void }) {
+function DashboardPage({ stats, employees, punches, rules, date, onDate, onAdd, onGo, loading, error }: { stats: { present: number; absent: number; break: number; notIn: number; late: number }; employees: Employee[]; punches: Punch[]; rules: Rules; date: string; onDate: (date: string) => void; onAdd: () => void; onGo: (label: string) => void; loading: boolean; error: string }) {
   const selected = employees.map((employee) => ({ employee, ...statusForDate(employee, date, punches, rules) }));
   const lateEmployees = selected.filter((x) => x.late).map((x) => ({ ...x.employee, late: x.late }));
   return <>
     <div className="welcome-row"><div><h2>Good morning, Admin 👋</h2><p>Attendance overview for the selected date.</p></div><div className="page-actions"><label className="date-filter">Date<input type="date" value={date} onChange={(e) => onDate(e.target.value)} /></label><button className="primary-button" onClick={onAdd}>+ Add Employee</button></div></div>
+    {error && <div className="live-message">{error}</div>}
+    {loading && <div className="live-message">Loading live attendance from Supabase…</div>}
     <section className="stats-grid"><StatCard label="Present" value={String(stats.present)} detail="Working / completed" icon="✓" tone="green" /><StatCard label="Absent" value={String(stats.absent)} detail="Marked absent" icon="×" tone="red" /><StatCard label="On Break" value={String(stats.break)} detail="Currently away" icon="◌" tone="orange" /><StatCard label="Not Checked In" value={String(stats.notIn)} detail="Expected today" icon="○" tone="blue" /><StatCard label="Late Arrivals" value={String(stats.late)} detail="After grace period" icon="!" tone="purple" /></section>
-    <section className="dashboard-grid"><div className="panel attendance-panel"><div className="panel-header"><div><h3>Attendance</h3><p>Selected date · {date}</p></div><button className="ghost-button" onClick={() => onGo("Attendance")}>View all →</button></div><div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>LOCATION</th><th>SHIFT IN</th><th>STATUS</th></tr></thead><tbody>{selected.slice(0, 7).map((item) => <tr key={item.employee.id}><td><div className="employee-cell"><div className="avatar small">{item.employee.avatar}</div><div><strong>{item.employee.name}</strong><small>{item.employee.id}</small></div></div></td><td>{item.employee.location}</td><td>{item.shiftIn}</td><td><StatusBadge status={item.late ? "Late" : item.status} /></td></tr>)}</tbody></table></div></div><div className="panel"><div className="panel-header"><div><h3>Recent Activity</h3><p>Selected date · face verification events</p></div></div><div className="activity-list">{punches.slice(0, 6).map((punch) => <div className="activity" key={punch.id}><div className="activity-dot" /><div className="activity-body"><strong>{punch.employee}</strong><span>{punch.action} · {punch.faceVerified ? "Face verified" : "Web admin"}</span></div><time>{punch.time}</time></div>)}</div></div></section>
+    <section className="dashboard-grid"><div className="panel attendance-panel"><div className="panel-header"><div><h3>Attendance</h3><p>Selected date · {date}</p></div><button className="ghost-button" onClick={() => onGo("Attendance")}>View all →</button></div><div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>LOCATION</th><th>SHIFT IN</th><th>SHIFT OUT</th><th>STATUS</th></tr></thead><tbody>{selected.slice(0, 7).map((item) => <tr key={item.employee.id}><td><div className="employee-cell"><div className="avatar small">{item.employee.avatar}</div><div><strong>{item.employee.name}</strong><small>{item.employee.id}</small></div></div></td><td>{item.employee.location}</td><td>{item.shiftIn}</td><td>{item.shiftOut}</td><td><StatusBadge status={item.late ? "Late" : item.status} /></td></tr>)}</tbody></table></div></div><div className="panel"><div className="panel-header"><div><h3>Recent Activity</h3><p>Selected date · face verification events</p></div></div><div className="activity-list">{punches.slice(0, 6).map((punch) => <div className="activity" key={punch.id}><div className="activity-dot" /><div className="activity-body"><strong>{punch.employee}</strong><span>{punch.action} · {punch.faceVerified ? "Face verified" : "Web admin"}</span></div><time>{punch.time}</time></div>)}</div></div></section>
     <section className="quick-row"><button className="quick-card" onClick={() => onGo("Employees")}><span className="quick-icon">♙</span><div><strong>{employees.length} Employees</strong><small>Manage your team</small></div><span className="arrow">→</span></button><button className="quick-card" onClick={() => onGo("Locations")}><span className="quick-icon">⌖</span><div><strong>Locations</strong><small>{new Set(employees.map((e) => e.location)).size} active</small></div><span className="arrow">→</span></button><button className="quick-card" onClick={() => onGo("Reports")}><span className="quick-icon">▤</span><div><strong>Reports</strong><small>View attendance reports</small></div><span className="arrow">→</span></button></section>
     <section className="panel late-panel"><div className="panel-header"><div><h3>Late arrivals</h3><p>Employees who punched after the configured grace period</p></div></div><div className="late-list">{lateEmployees.slice(0, 6).map((e) => <div className="late-row" key={e.id}><div className="employee-cell"><div className="avatar small">{e.avatar}</div><div><strong>{e.name}</strong><small>{e.id} · {e.location}</small></div></div><StatusBadge status="Late" /></div>)}</div></section>
   </>;

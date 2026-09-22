@@ -35,3 +35,13 @@ Web deploys from GitHub main to Vercel. Android lives under /mobile and is indep
 
 ## Handoff rule
 When the user says “bye”, update all project Markdown handoff documents with the latest architecture, implementation state, decisions and next step, then commit the documentation to GitHub.
+
+
+## Architecture history
+The architecture evolved from a local-looking web prototype into a live Supabase-backed web test plus an independent Expo kiosk.
+
+The root web UI is not the same thing as the /live integration test. This distinction matters when troubleshooting why data appears in one screen but not Supabase.
+
+The Android app is intentionally independent of Vercel. It uses Supabase directly.
+
+The face-recognition layer is the remaining major architectural component before the kiosk can become the intended real attendance mechanism.

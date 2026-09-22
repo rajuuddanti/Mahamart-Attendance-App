@@ -38,6 +38,7 @@ type Punch = {
   action: "Shift In" | "Shift Out" | "Break Out" | "Break In";
   time: string;
   date: string;
+  punchedAt?: string;
   faceVerified: boolean;
   faceConfidence: number;
   source: "Web Admin" | "Kiosk";
@@ -127,7 +128,10 @@ function scheduleTimeToMinutes(value: string) {
 
 function statusForDate(employee: Employee, date: string, punches: Punch[], rules: Rules) {
   const events = punches.filter((p) => p.employeeId === employee.id && p.date === date)
-    .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+    .sort((a, b) => {
+      if (a.punchedAt && b.punchedAt) return new Date(a.punchedAt).getTime() - new Date(b.punchedAt).getTime();
+      return timeToMinutes(a.time) - timeToMinutes(b.time);
+    });
   const shiftIn = events.find((p) => p.action === "Shift In");
   const shiftOut = [...events].reverse().find((p) => p.action === "Shift Out");
   const lastShift = [...events].reverse().find((p) => p.action === "Shift In" || p.action === "Shift Out");
@@ -340,6 +344,7 @@ export default function Dashboard() {
       action: row.action,
       time: formatPunchTime(row.punched_at),
       date: dateKeyFromTimestamp(row.punched_at),
+      punchedAt: row.punched_at,
       faceVerified: !!row.face_verified,
       faceConfidence: Number(row.face_confidence || 0),
       source: row.source === "Web Admin" ? "Web Admin" : "Kiosk",

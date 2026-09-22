@@ -82,7 +82,21 @@ Default:
 No week-off logic.
 
 ## Face recognition
-Planned later for Android kiosk. Prefer on-device processing where practical, secure embeddings/templates, multiple registration samples, quality checks and liveness/anti-spoofing. Not part of current live-test baseline.
+This is now the next active feature after the live-test baseline.
+The Android kiosk must eventually:
+1. Open the front camera.
+2. Detect a face.
+3. Perform liveness/anti-spoofing.
+4. Generate a face embedding from the live face.
+5. Match it against enrolled employee face templates.
+6. Identify the employee automatically; no employee selector in the final kiosk flow.
+7. Apply the existing Shift In/Shift Out rules.
+8. Apply GPS/geofence and actual punch-location rules.
+9. Write the verified attendance punch to Supabase.
+
+Prefer on-device processing where practical. Face templates/embeddings are sensitive biometric data and require secure storage, access control, and production hardening. Expo device LocalAuthentication is not the employee-recognition solution; it authenticates the device owner's biometric and cannot identify one of our employees.
+
+Current Android app is still a manual employee-selector prototype. The next implementation step is to choose and integrate a compatible camera + face detection/embedding + liveness stack, likely requiring an Expo development build/native modules. Do not fake face recognition with a camera preview or device biometric prompt.
 
 ## Database
 Core tables:
@@ -124,14 +138,29 @@ Employee import supports employee ID, name, location, phone, email, DOB, gender,
 - Realtime attendance groundwork
 - Location/geofence groundwork
 - Remote-punch groundwork
+- Android kiosk app connected to Supabase
+- Android GPS punch fields connected to the database
 
-Face recognition is deferred.
+The temporary Android employee selector is only for testing. Final kiosk punching must use face recognition.
+
+## Known current Android issue
+mobile/App.tsx previously had an accidental setPunchPlace(geo.name) reference inside signIn() even though geo is not defined there. Verify/fix this before relying on kiosk sign-in.
 
 ## Deliberately deferred
-Payroll, full face recognition, liveness, production biometric hardening, advanced HR workflows, final DB-level granular permissions, production kiosk lockdown, final geofence configuration for every store, advanced reporting/export and other HR-requested features.
+Payroll, production biometric hardening, advanced HR workflows, final DB-level granular permissions, production kiosk lockdown, final geofence configuration for every store, advanced reporting/export and other HR-requested features.
 
-## Stop point
-Feature development is paused for live testing and HR review. Before adding features, test web/Supabase, Android kiosk, In/Out, admin break + Break In, geofence and remote punch.
+## Current stop point
+The project is paused between the initial live test and the next face-recognition implementation. The last user-visible state was the Android kiosk running with a manual employee selector. User wants to continue with real facial recognition next.
+
+## Cross-account handoff rule
+When the user says “bye” at the end of a work session, before ending the session update:
+- docs/PROJECT_BRAIN.md
+- docs/DATABASE.md
+- docs/BUSINESS_RULES.md
+- docs/ARCHITECTURE.md
+- docs/DEVELOPMENT_LOG.md
+
+The updates should capture the latest completed work, database changes, decisions, bugs, current stop point, and exact next step. Commit the documentation to GitHub so another ChatGPT account can resume from the repository without relying on chat history.
 
 ## Project rule
-GitHub contains the implementation. This document preserves the important product decisions, business rules, architecture and current state so the project can be resumed in another ChatGPT conversation/account.
+GitHub contains the implementation. These documents preserve the important product decisions, business rules, architecture, database state, development history and current handoff so the project can be resumed in another ChatGPT conversation/account.

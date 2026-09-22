@@ -35,3 +35,17 @@ RLS is enabled. Current policies provide company/location access control. Full g
 
 ## Sensitive data
 Legal employee information and biometric templates require protection. Do not expose raw biometric templates in ordinary admin UI.
+
+## Current database/live-test note
+employees.remote_punch_allowed and the following attendance_punches GPS/location columns were manually applied to Supabase during live testing:
+- latitude
+- longitude
+- accuracy_m
+- geo_verified
+- punch_location_name
+- punch_mode
+
+Face recognition will use the existing employee face-template storage (face_template / face_capture_path) as the starting point, but the final biometric schema and security policy still need review.
+
+## Handoff rule
+At the end of a session, when the user says “bye”, update this file with any database changes made during that session and commit the documentation to GitHub.

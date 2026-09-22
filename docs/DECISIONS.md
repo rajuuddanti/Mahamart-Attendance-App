@@ -47,3 +47,16 @@ The seven Markdown handoff files are now the project's cross-account memory:
 - IMPLEMENTATIONS.md
 
 Whenever the user says "bye", update all of them before ending the session.
+
+
+## Historical decisions and rationale
+- The product is attendance-only because payroll was deliberately kept outside the first scope.
+- Web admin came first so HR/admin workflows could be validated before building the employee kiosk.
+- Shared kiosks were selected because the intended store model is a manager-controlled device, not every employee carrying the attendance app.
+- The employee selector was accepted only as a temporary testing shortcut. It is explicitly not a product decision.
+- The break model was simplified to prevent employees from creating arbitrary breaks; admin authorization controls breaks.
+- Actual punch location was separated from assigned location to support remote employees without corrupting employee master data.
+- Remote punch is employee-specific so the company can authorize only selected employees.
+- Face recognition must be real employee identification, not device biometric authentication.
+- We chose not to finalize the biometric database structure before choosing the ML stack, because embedding/model formats and liveness implementation affect the schema.
+- The user wants live testing before adding broad additional features.
